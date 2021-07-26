@@ -24,6 +24,7 @@
 #include "cli_wallet.h"
 #include "sensor.h"
 
+#include "client/api/v1/find_message.h"
 #include "client/api/v1/get_node_info.h"
 #include "client/api/v1/get_outputs_from_address.h"
 #include "client/api/v1/send_message.h"
@@ -327,7 +328,7 @@ static int fn_send_msg(int argc, char **argv) {
 
   char const *const recv_addr = send_msg_args.receiver->sval[0];
   // validating receiver address
-  if (strncmp("atoi", recv_addr, 4) == 0 || strncmp("iota", recv_addr, 4) == 0) {
+  if (strncmp(recv_addr, wallet->bech32HRP, strlen(wallet->bech32HRP)) == 0) {
     // convert bech32 address to binary
     if ((err = address_from_bech32(wallet->bech32HRP, recv_addr, recv))) {
       ESP_LOGE(TAG, "invalid bech32 address\n");
@@ -501,21 +502,55 @@ static void register_sensor() {
   ESP_ERROR_CHECK(esp_console_cmd_register(&sensor_cmd));
 }
 
-/* 'api_test' command */
-static int fn_api_test(int argc, char **argv) {
-  int err = 0;
-  // TODO testing basic APIs
+/* 'api_msg_index' command */
+static struct {
+  struct arg_str *index;
+  struct arg_end *end;
+} api_find_msg_index_args;
+
+static int fn_api_find_msg_index(int argc, char **argv) {
+  int nerrors = arg_parse(argc, argv, (void **)&api_find_msg_index_args);
+  if (nerrors != 0) {
+    arg_print_errors(stderr, api_find_msg_index_args.end, argv[0]);
+    return -1;
+  }
+
+  res_find_msg_t *res = res_find_msg_new();
+  if (!res) {
+    ESP_LOGE(TAG, "new object failed\n");
+    return -1;
+  }
+
+  int err = find_message_by_index(&wallet->endpoint, api_find_msg_index_args.index->sval[0], res);
+  if (err) {
+    ESP_LOGE(TAG, "find message by index API failed");
+  } else {
+    if (res->is_error) {
+      printf("%s\n", res->u.error->msg);
+    } else {
+      size_t count = res_find_msg_get_id_len(res);
+      for (size_t i = 0; i < count; i++) {
+        printf("%s\n", res_find_msg_get_id(res, i));
+      }
+      printf("message ID count %zu\n", count);
+    }
+  }
+
+  res_find_msg_free(res);
   return err;
 }
 
-static void register_api_test() {
-  const esp_console_cmd_t api_test_cmd = {
-      .command = "api_test",
-      .help = "test client APIs",
-      .hint = NULL,
-      .func = &fn_api_test,
+static void register_api_find_msg_index() {
+  api_find_msg_index_args.index = arg_str1(NULL, NULL, "<index>", "Index string");
+  api_find_msg_index_args.end = arg_end(2);
+  const esp_console_cmd_t api_find_msg_cmd = {
+      .command = "api_msg_index",
+      .help = "Find messages by a given index",
+      .hint = " <index>",
+      .func = &fn_api_find_msg_index,
+      .argtable = &api_find_msg_index_args,
   };
-  ESP_ERROR_CHECK(esp_console_cmd_register(&api_test_cmd));
+  ESP_ERROR_CHECK(esp_console_cmd_register(&api_find_msg_cmd));
 }
 
 //============= Public functions====================
@@ -537,7 +572,7 @@ void register_wallet_commands() {
   // client APIs
   register_api_node_info();
   // TODO
-  // register_api_find_message();
+  register_api_find_msg_index();
   // register_api_get_balance();
   // register_api_get_msg_children();
   // register_api_get_msg_metadata();
