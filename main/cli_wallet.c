@@ -25,6 +25,7 @@
 #include "sensor.h"
 
 #include "client/api/v1/find_message.h"
+#include "client/api/v1/get_balance.h"
 #include "client/api/v1/get_node_info.h"
 #include "client/api/v1/get_outputs_from_address.h"
 #include "client/api/v1/send_message.h"
@@ -553,6 +554,73 @@ static void register_api_find_msg_index() {
   ESP_ERROR_CHECK(esp_console_cmd_register(&api_find_msg_cmd));
 }
 
+/* 'api_get_balance' command */
+static struct {
+  struct arg_str *addr;
+  struct arg_end *end;
+} api_get_balance_args;
+
+static int fn_api_get_balance(int argc, char **argv) {
+  byte_t address[IOTA_ADDRESS_BYTES] = {};
+  char hex_addr[IOTA_ADDRESS_HEX_BYTES + 1] = {};
+  int nerrors = arg_parse(argc, argv, (void **)&api_get_balance_args);
+  if (nerrors != 0) {
+    arg_print_errors(stderr, api_get_balance_args.end, argv[0]);
+    return -1;
+  }
+
+  char const *const bech32_add_str = api_get_balance_args.addr->sval[0];
+  if (strncmp(bech32_add_str, wallet->bech32HRP, strlen(wallet->bech32HRP)) != 0) {
+    printf("Invalid address hash\n");
+    return -1;
+  } else {
+    // convert bech32 address to ed25519 address
+    if (address_from_bech32(wallet->bech32HRP, bech32_add_str, address) != 0) {
+      printf("Convert bech32 address to ed25519 failed\n");
+      return -1;
+    }
+
+    // ed25519 address to hex string
+    if (bin_2_hex(address + 1, IOTA_ADDRESS_BYTES - 1, hex_addr, sizeof(hex_addr)) != 0) {
+      printf("Convert ed25519 address to hex string failed\n");
+      return -1;
+    }
+
+    // get balance from connected node
+    res_balance_t *res = res_balance_new();
+    if (!res) {
+      printf("Create res_balance_t object failed\n");
+      return -1;
+    } else {
+      nerrors = get_balance(&wallet->endpoint, hex_addr, res);
+      if (nerrors != 0) {
+        printf("get_balance API failed\n");
+      } else {
+        if (res->is_error) {
+          printf("Err: %s\n", res->u.error->msg);
+        } else {
+          printf("balance: %" PRIu64 "\n", res->u.output_balance->balance);
+        }
+      }
+      res_balance_free(res);
+    }
+  }
+  return nerrors;
+}
+
+static void register_api_get_balance() {
+  api_get_balance_args.addr = arg_str1(NULL, NULL, "<address>", "Address HASH");
+  api_get_balance_args.end = arg_end(2);
+  const esp_console_cmd_t api_get_balance_cmd = {
+      .command = "api_get_balance",
+      .help = "Get balance from a given address",
+      .hint = " <address>",
+      .func = &fn_api_get_balance,
+      .argtable = &api_get_balance_args,
+  };
+  ESP_ERROR_CHECK(esp_console_cmd_register(&api_get_balance_cmd));
+}
+
 //============= Public functions====================
 
 void register_wallet_commands() {
@@ -571,9 +639,9 @@ void register_wallet_commands() {
 
   // client APIs
   register_api_node_info();
-  // TODO
   register_api_find_msg_index();
-  // register_api_get_balance();
+  register_api_get_balance();
+  // TODO
   // register_api_get_msg_children();
   // register_api_get_msg_metadata();
   // register_api_get_msg();
