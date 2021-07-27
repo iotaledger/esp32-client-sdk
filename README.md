@@ -1,4 +1,4 @@
-# IOTA Client Software Development Kid(SDK) for ESP32
+# IOTA Client Software Development Kit(SDK) for ESP32
 
 This SDK is built on top of [iota.c](https://github.com/iotaledger/iota.c) and [ESP-IDF](https://github.com/espressif/esp-idf) for IOTA client development on ESP32 MCU series.
 
