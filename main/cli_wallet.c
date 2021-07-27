@@ -31,6 +31,7 @@
 #include "client/api/v1/get_node_info.h"
 #include "client/api/v1/get_output.h"
 #include "client/api/v1/get_outputs_from_address.h"
+#include "client/api/v1/get_tips.h"
 #include "client/api/v1/send_message.h"
 #include "wallet/wallet.h"
 
@@ -881,6 +882,43 @@ static void register_api_get_output() {
   };
   ESP_ERROR_CHECK(esp_console_cmd_register(&api_get_output_cmd));
 }
+
+/* 'api_tips' command */
+static int fn_api_tips(int argc, char **argv) {
+  int err = 0;
+  res_tips_t *res = res_tips_new();
+  if (!res) {
+    ESP_LOGE(TAG, "Allocate tips object failed\n");
+    return -1;
+  }
+
+  err = get_tips(&wallet->endpoint, res);
+  if (err != 0) {
+    printf("get_tips error\n");
+  } else {
+    if (res->is_error) {
+      printf("%s\n", res->u.error->msg);
+    } else {
+      for (size_t i = 0; i < get_tips_id_count(res); i++) {
+        printf("%s\n", get_tips_id(res, i));
+      }
+    }
+  }
+
+  res_tips_free(res);
+  return err;
+}
+
+static void register_api_tips() {
+  const esp_console_cmd_t api_tips_cmd = {
+      .command = "api_tips",
+      .help = "Get tips from connected node",
+      .hint = NULL,
+      .func = &fn_api_tips,
+  };
+  ESP_ERROR_CHECK(esp_console_cmd_register(&api_tips_cmd));
+}
+
 //============= Public functions====================
 
 void register_wallet_commands() {
@@ -905,8 +943,7 @@ void register_wallet_commands() {
   register_api_msg_meta();
   register_api_address_outputs();
   register_api_get_output();
-  // TODO
-  // register_api_get_tips();
+  register_api_tips();
 }
 
 int init_wallet() {
