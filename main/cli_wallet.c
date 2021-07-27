@@ -27,6 +27,7 @@
 #include "client/api/v1/find_message.h"
 #include "client/api/v1/get_balance.h"
 #include "client/api/v1/get_message_children.h"
+#include "client/api/v1/get_message_metadata.h"
 #include "client/api/v1/get_node_info.h"
 #include "client/api/v1/get_outputs_from_address.h"
 #include "client/api/v1/send_message.h"
@@ -622,7 +623,7 @@ static void register_api_get_balance() {
   ESP_ERROR_CHECK(esp_console_cmd_register(&api_get_balance_cmd));
 }
 
-/* 'api_get_msg_children' command */
+/* 'api_msg_children' command */
 static struct {
   struct arg_str *msg_id;
   struct arg_end *end;
@@ -683,6 +684,84 @@ static void register_api_msg_children() {
   ESP_ERROR_CHECK(esp_console_cmd_register(&api_msg_children_cmd));
 }
 
+/* 'api_msg_meta' command */
+static struct {
+  struct arg_str *msg_id;
+  struct arg_end *end;
+} api_msg_meta_args;
+
+static int fn_api_msg_meta(int argc, char **argv) {
+  int nerrors = arg_parse(argc, argv, (void **)&api_msg_meta_args);
+  if (nerrors != 0) {
+    arg_print_errors(stderr, api_msg_meta_args.end, argv[0]);
+    return -1;
+  }
+
+  // check message id length
+  char const *const msg_id_str = api_msg_meta_args.msg_id->sval[0];
+  if (strlen(msg_id_str) != IOTA_MESSAGE_ID_HEX_BYTES) {
+    printf("Invalid message ID length\n");
+    return -1;
+  }
+
+  res_msg_meta_t *res = res_msg_meta_new();
+  if (!res) {
+    printf("Allocate response failed\n");
+    return -1;
+  } else {
+    nerrors = get_message_metadata(&wallet->endpoint, msg_id_str, res);
+    if (nerrors) {
+      printf("get_message_metadata error %d\n", nerrors);
+    } else {
+      if (res->is_error) {
+        printf("%s\n", res->u.error->msg);
+      } else {
+        printf("Message ID: %s\nisSolid: %s\n", res->u.meta->msg_id, res->u.meta->is_solid ? "True" : "False");
+        size_t parents = res_msg_meta_parents_len(res);
+        printf("%zu parents:\n", parents);
+        for (size_t i = 0; i < parents; i++) {
+          printf("\t%s\n", res_msg_meta_parent_get(res, i));
+        }
+        printf("ledgerInclusionState: %s\n", res->u.meta->inclusion_state);
+
+        // check milestone index
+        if (res->u.meta->milestone_idx != 0) {
+          printf("milestoneIndex: %" PRIu64 "\n", res->u.meta->milestone_idx);
+        }
+
+        // check referenced milestone index
+        if (res->u.meta->referenced_milestone != 0) {
+          printf("referencedByMilestoneIndex: %" PRIu64 "\n", res->u.meta->referenced_milestone);
+        }
+
+        // check should promote
+        if (res->u.meta->should_promote >= 0) {
+          printf("shouldPromote: %s\n", res->u.meta->should_promote ? "True" : "False");
+        }
+        // check should reattach
+        if (res->u.meta->should_reattach >= 0) {
+          printf("shouldReattach: %s\n", res->u.meta->should_reattach ? "True" : "False");
+        }
+      }
+    }
+    res_msg_meta_free(res);
+  }
+  return nerrors;
+}
+
+static void register_api_msg_meta() {
+  api_msg_meta_args.msg_id = arg_str1(NULL, NULL, "<ID>", "Message ID");
+  api_msg_meta_args.end = arg_end(2);
+  const esp_console_cmd_t api_msg_meta_cmd = {
+      .command = "api_msg_meta",
+      .help = "Get metadata from a given message ID",
+      .hint = " <ID>",
+      .func = &fn_api_msg_meta,
+      .argtable = &api_msg_meta_args,
+  };
+  ESP_ERROR_CHECK(esp_console_cmd_register(&api_msg_meta_cmd));
+}
+
 //============= Public functions====================
 
 void register_wallet_commands() {
@@ -704,8 +783,8 @@ void register_wallet_commands() {
   register_api_find_msg_index();
   register_api_get_balance();
   register_api_msg_children();
+  register_api_msg_meta();
   // TODO
-  // register_api_get_msg_metadata();
   // register_api_get_msg();
   // register_api_get_output();
   // register_api_get_outputs_from_addr();
