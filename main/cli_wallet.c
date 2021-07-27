@@ -26,6 +26,7 @@
 
 #include "client/api/v1/find_message.h"
 #include "client/api/v1/get_balance.h"
+#include "client/api/v1/get_message_children.h"
 #include "client/api/v1/get_node_info.h"
 #include "client/api/v1/get_outputs_from_address.h"
 #include "client/api/v1/send_message.h"
@@ -621,6 +622,67 @@ static void register_api_get_balance() {
   ESP_ERROR_CHECK(esp_console_cmd_register(&api_get_balance_cmd));
 }
 
+/* 'api_get_msg_children' command */
+static struct {
+  struct arg_str *msg_id;
+  struct arg_end *end;
+} api_msg_children_args;
+
+static int fn_api_msg_children(int argc, char **argv) {
+  int nerrors = arg_parse(argc, argv, (void **)&api_msg_children_args);
+  if (nerrors != 0) {
+    arg_print_errors(stderr, api_msg_children_args.end, argv[0]);
+    return -1;
+  }
+
+  // check message id length
+  char const *const msg_id_str = api_msg_children_args.msg_id->sval[0];
+  if (strlen(msg_id_str) != IOTA_MESSAGE_ID_HEX_BYTES) {
+    printf("Invalid message ID length\n");
+    return -1;
+  }
+
+  res_msg_children_t *res = res_msg_children_new();
+  if (!res) {
+    printf("Allocate response failed\n");
+    return -1;
+  } else {
+    nerrors = get_message_children(&wallet->endpoint, msg_id_str, res);
+    if (nerrors) {
+      printf("get_message_children error %d\n", nerrors);
+    } else {
+      if (res->is_error) {
+        printf("Err: %s\n", res->u.error->msg);
+      } else {
+        size_t count = res_msg_children_len(res);
+        if (count == 0) {
+          printf("Message not found\n");
+        } else {
+          for (size_t i = 0; i < count; i++) {
+            printf("%s\n", res_msg_children_get(res, i));
+          }
+        }
+      }
+    }
+    res_msg_children_free(res);
+  }
+
+  return nerrors;
+}
+
+static void register_api_msg_children() {
+  api_msg_children_args.msg_id = arg_str1(NULL, NULL, "<ID>", "Message ID");
+  api_msg_children_args.end = arg_end(2);
+  const esp_console_cmd_t api_msg_children_cmd = {
+      .command = "api_msg_children",
+      .help = "Get children from a given message ID",
+      .hint = " <ID>",
+      .func = &fn_api_msg_children,
+      .argtable = &api_msg_children_args,
+  };
+  ESP_ERROR_CHECK(esp_console_cmd_register(&api_msg_children_cmd));
+}
+
 //============= Public functions====================
 
 void register_wallet_commands() {
@@ -641,8 +703,8 @@ void register_wallet_commands() {
   register_api_node_info();
   register_api_find_msg_index();
   register_api_get_balance();
+  register_api_msg_children();
   // TODO
-  // register_api_get_msg_children();
   // register_api_get_msg_metadata();
   // register_api_get_msg();
   // register_api_get_output();
