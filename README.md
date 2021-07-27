@@ -11,7 +11,14 @@ This SDK provides some example for testing and learn IOTA Client application, co
 
 **Client API**
 
-* `node_info` - Get connected node info
+* `node_info` - Get info from the connected node
+* `api_msg_index` - Find messages by a given Index
+* `api_get_balance` - Get balance from a given address
+* `api_msg_children` - Get children from a given message ID
+* `api_msg_meta` - Get metadata from a given message ID
+* `api_address_outputs` - Get output ID list from a given address
+* `api_get_output` - Get the output object from a given output ID
+* `api_tips` - Get tips from the connected node
 
 **Wallet**
 
@@ -99,7 +106,7 @@ IOTA Wallet  --->
 $ idf.py build
 ```
 
-### Run the Wallet Application
+### Run the Example Application
 
 ![](image/wallet_console.png)
 
