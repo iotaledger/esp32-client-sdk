@@ -29,6 +29,7 @@
 #include "client/api/v1/get_message_children.h"
 #include "client/api/v1/get_message_metadata.h"
 #include "client/api/v1/get_node_info.h"
+#include "client/api/v1/get_output.h"
 #include "client/api/v1/get_outputs_from_address.h"
 #include "client/api/v1/send_message.h"
 #include "wallet/wallet.h"
@@ -95,7 +96,7 @@ static int address_bech32_to_hex(char const hrp[], char const bech32[], char hex
   // ed25519 address to hex string
   if (bin_2_hex(address + 1, IOTA_ADDRESS_BYTES - 1, hex, hex_len) != 0) {
     printf("Convert ed25519 address to hex string failed\n");
-    return -1;
+    return -2;
   }
   return 0;
 }
@@ -119,7 +120,7 @@ static int endpoint_validation(iota_wallet_t *w) {
       w->endpoint.host[u.field_data[UF_HOST].len] = '\0';
     } else {
       ESP_LOGE(TAG, "hostname is too long\n");
-      return -1;
+      return -2;
     }
   }
 
@@ -238,12 +239,12 @@ static void register_stack_info() {
 /* 'address' command */
 static struct {
   struct arg_dbl *idx_start;
-  struct arg_dbl *idx_end;
+  struct arg_dbl *idx_count;
   struct arg_end *end;
 } get_addr_args;
 
 static int fn_get_address(int argc, char **argv) {
-  byte_t addr_wit_version[IOTA_ADDRESS_BYTES] = {};
+  byte_t addr_with_version[IOTA_ADDRESS_BYTES] = {};
   char tmp_bech32_addr[100] = {};
   int nerrors = arg_parse(argc, argv, (void **)&get_addr_args);
   if (nerrors != 0) {
@@ -251,35 +252,36 @@ static int fn_get_address(int argc, char **argv) {
     return -1;
   }
   uint32_t start = (uint32_t)get_addr_args.idx_start->dval[0];
-  uint32_t end = (uint32_t)get_addr_args.idx_end->dval[0];
-  if (end < start) {
-    ESP_LOGI(TAG, "invalid address range\n");
-    return -1;
-  }
+  uint32_t count = (uint32_t)get_addr_args.idx_count->dval[0];
 
-  while (end >= start) {
-    addr_wit_version[0] = ADDRESS_VER_ED25519;
-    wallet_address_by_index(wallet, start, addr_wit_version + 1);
-    address_2_bech32(addr_wit_version, wallet->bech32HRP, tmp_bech32_addr);
-    printf("Addr[%" PRIu32 "]\n", start);
-    // print ed25519 address without version filed.
-    printf("\t");
-    dump_hex_str(addr_wit_version + 1, ED25519_ADDRESS_BYTES);
-    // print out
-    printf("\t%s\n", tmp_bech32_addr);
-    start++;
+  for (uint32_t i = 0; i < start + count; i++) {
+    addr_with_version[0] = ADDRESS_VER_ED25519;
+    nerrors = wallet_address_by_index(wallet, i, addr_with_version + 1);
+    if (nerrors != 0) {
+      printf("wallet_address_by_index error\n");
+      break;
+    } else {
+      if (address_2_bech32(addr_with_version, wallet->bech32HRP, tmp_bech32_addr) == 0) {
+        printf("Addr[%" PRIu32 "]\n", i);
+        // print ed25519 address without version filed.
+        printf("\t");
+        dump_hex_str(addr_with_version + 1, ED25519_ADDRESS_BYTES);
+        // print out
+        printf("\t%s\n", tmp_bech32_addr);
+      }
+    }
   }
-  return 0;
+  return nerrors;
 }
 
 static void register_get_address() {
   get_addr_args.idx_start = arg_dbl1(NULL, NULL, "<start>", "start index");
-  get_addr_args.idx_end = arg_dbl1(NULL, NULL, "<end>", "end index");
+  get_addr_args.idx_count = arg_dbl1(NULL, NULL, "<count>", "number of addresses");
   get_addr_args.end = arg_end(2);
   const esp_console_cmd_t get_address_cmd = {
       .command = "address",
-      .help = "Get the address from an index range",
-      .hint = " <start> <end>",
+      .help = "Get the address from an index",
+      .hint = " <start> <count>",
       .func = &fn_get_address,
       .argtable = &get_addr_args,
   };
@@ -289,48 +291,39 @@ static void register_get_address() {
 /* 'balance' command */
 static struct {
   struct arg_dbl *idx_start;
-  struct arg_dbl *idx_end;
+  struct arg_dbl *idx_count;
   struct arg_end *end;
 } get_balance_args;
 
 static int fn_get_balance(int argc, char **argv) {
   int nerrors = arg_parse(argc, argv, (void **)&get_balance_args);
   uint64_t balance = 0;
-  uint32_t addr_start = 0;
-  uint32_t addr_end = 0;
   if (nerrors != 0) {
     arg_print_errors(stderr, get_balance_args.end, argv[0]);
     return -1;
   }
 
-  addr_start = get_balance_args.idx_start->dval[0];
-  addr_end = get_balance_args.idx_end->dval[0];
+  uint32_t start = get_balance_args.idx_start->dval[0];
+  uint32_t count = get_balance_args.idx_count->dval[0];
 
-  if (addr_end < addr_start) {
-    ESP_LOGI(TAG, "invalid address range\n");
-    return -1;
-  }
-
-  while (addr_end >= addr_start) {
-    if (wallet_balance_by_index(wallet, addr_start, &balance) != 0) {
-      ESP_LOGI(TAG, "get balance failed on %zu\n", addr_start);
-      return -1;
+  for (uint32_t i = 0; i < start + count; i++) {
+    if (wallet_balance_by_index(wallet, i, &balance) != 0) {
+      ESP_LOGI(TAG, "get balance failed on %zu\n", i);
+      return -2;
     }
-    printf("balance on address [%" PRIu32 "]: %" PRIu64 "i\n", addr_start, balance);
-    addr_start++;
+    printf("balance on address [%" PRIu32 "]: %" PRIu64 "i\n", i, balance);
   }
-
   return 0;
 }
 
 static void register_get_balance() {
   get_balance_args.idx_start = arg_dbl1(NULL, NULL, "<start>", "start index");
-  get_balance_args.idx_end = arg_dbl1(NULL, NULL, "<end>", "end index");
+  get_balance_args.idx_count = arg_dbl1(NULL, NULL, "<count>", "number of address");
   get_balance_args.end = arg_end(2);
   const esp_console_cmd_t get_balance_cmd = {
       .command = "balance",
       .help = "Get the balance from a range of address index",
-      .hint = " <start> <end>",
+      .hint = " <start> <count>",
       .func = &fn_get_balance,
       .argtable = &get_balance_args,
   };
@@ -346,7 +339,6 @@ static struct {
 } send_msg_args;
 
 static int fn_send_msg(int argc, char **argv) {
-  int err = 0;
   char msg_id[IOTA_MESSAGE_ID_HEX_BYTES + 1] = {};
   char data[] = "sent from esp32 via iota.c";
   int nerrors = arg_parse(argc, argv, (void **)&send_msg_args);
@@ -360,20 +352,20 @@ static int fn_send_msg(int argc, char **argv) {
   // validating receiver address
   if (strncmp(recv_addr, wallet->bech32HRP, strlen(wallet->bech32HRP)) == 0) {
     // convert bech32 address to binary
-    if ((err = address_from_bech32(wallet->bech32HRP, recv_addr, recv))) {
+    if ((nerrors = address_from_bech32(wallet->bech32HRP, recv_addr, recv))) {
       ESP_LOGE(TAG, "invalid bech32 address\n");
-      return -1;
+      return -2;
     }
   } else if (strlen(recv_addr) == IOTA_ADDRESS_HEX_BYTES) {
     // convert ed25519 string to binary
     if (hex_2_bin(recv_addr, strlen(recv_addr), recv + 1, ED25519_ADDRESS_BYTES) != 0) {
       ESP_LOGE(TAG, "invalid ed25519 address\n");
-      return -1;
+      return -3;
     }
 
   } else {
     ESP_LOGE(TAG, "invalid receiver address\n");
-    return -1;
+    return -4;
   }
 
   // balance = number * Mi
@@ -385,14 +377,14 @@ static int fn_send_msg(int argc, char **argv) {
     printf("send indexation payload to tangle\n");
   }
 
-  err = wallet_send(wallet, (uint32_t)send_msg_args.sender->dval[0], recv + 1, balance, "ESP32 Wallet", (byte_t *)data,
-                    sizeof(data), msg_id, sizeof(msg_id));
-  if (err) {
+  nerrors = wallet_send(wallet, (uint32_t)send_msg_args.sender->dval[0], recv + 1, balance, "ESP32 Wallet",
+                        (byte_t *)data, sizeof(data), msg_id, sizeof(msg_id));
+  if (nerrors) {
     printf("send message failed\n");
-    return -1;
+    return -5;
   }
   printf("Message Hash: %s\n", msg_id);
-  return 0;
+  return nerrors;
 }
 
 static void register_send_tokens() {
@@ -600,19 +592,19 @@ static int fn_api_get_balance(int argc, char **argv) {
   char const *const bech32_add_str = api_get_balance_args.addr->sval[0];
   if (strncmp(bech32_add_str, wallet->bech32HRP, strlen(wallet->bech32HRP)) != 0) {
     printf("Invalid address hash\n");
-    return -1;
+    return -2;
   } else {
     // bech32 address to hex string
     if (address_bech32_to_hex(wallet->bech32HRP, bech32_add_str, hex_addr, sizeof(hex_addr)) != 0) {
       printf("Convert ed25519 address to hex string failed\n");
-      return -1;
+      return -3;
     }
 
     // get balance from connected node
     res_balance_t *res = res_balance_new();
     if (!res) {
       printf("Create res_balance_t object failed\n");
-      return -1;
+      return -4;
     } else {
       nerrors = get_balance(&wallet->endpoint, hex_addr, res);
       if (nerrors != 0) {
@@ -660,13 +652,13 @@ static int fn_api_msg_children(int argc, char **argv) {
   char const *const msg_id_str = api_msg_children_args.msg_id->sval[0];
   if (strlen(msg_id_str) != IOTA_MESSAGE_ID_HEX_BYTES) {
     printf("Invalid message ID length\n");
-    return -1;
+    return -2;
   }
 
   res_msg_children_t *res = res_msg_children_new();
   if (!res) {
     printf("Allocate response failed\n");
-    return -1;
+    return -3;
   } else {
     nerrors = get_message_children(&wallet->endpoint, msg_id_str, res);
     if (nerrors) {
@@ -721,13 +713,13 @@ static int fn_api_msg_meta(int argc, char **argv) {
   char const *const msg_id_str = api_msg_meta_args.msg_id->sval[0];
   if (strlen(msg_id_str) != IOTA_MESSAGE_ID_HEX_BYTES) {
     printf("Invalid message ID length\n");
-    return -1;
+    return -2;
   }
 
   res_msg_meta_t *res = res_msg_meta_new();
   if (!res) {
     printf("Allocate response failed\n");
-    return -1;
+    return -3;
   } else {
     nerrors = get_message_metadata(&wallet->endpoint, msg_id_str, res);
     if (nerrors) {
@@ -847,6 +839,48 @@ static void register_api_address_outputs() {
   ESP_ERROR_CHECK(esp_console_cmd_register(&api_address_outputs_cmd));
 }
 
+/* 'api_get_output' command */
+static struct {
+  struct arg_str *output_id;
+  struct arg_end *end;
+} api_get_output_args;
+
+static int fn_api_get_output(int argc, char **argv) {
+  int nerrors = arg_parse(argc, argv, (void **)&api_get_output_args);
+  if (nerrors != 0) {
+    arg_print_errors(stderr, api_get_output_args.end, argv[0]);
+    return -1;
+  }
+
+  res_output_t res = {};
+  nerrors = get_output(&wallet->endpoint, api_get_output_args.output_id->sval[0], &res);
+  if (nerrors != 0) {
+    printf("get_output error\n");
+    return -2;
+  } else {
+    if (res.is_error) {
+      printf("%s\n", res.u.error->msg);
+      res_err_free(res.u.error);
+    } else {
+      dump_output_response(&res);
+    }
+  }
+
+  return nerrors;
+}
+
+static void register_api_get_output() {
+  api_get_output_args.output_id = arg_str1(NULL, NULL, "<Output ID>", "An output ID");
+  api_get_output_args.end = arg_end(2);
+  const esp_console_cmd_t api_get_output_cmd = {
+      .command = "api_get_output",
+      .help = "Get the output object from a given output ID",
+      .hint = " <Output ID>",
+      .func = &fn_api_get_output,
+      .argtable = &api_get_output_args,
+  };
+  ESP_ERROR_CHECK(esp_console_cmd_register(&api_get_output_cmd));
+}
 //============= Public functions====================
 
 void register_wallet_commands() {
@@ -870,8 +904,8 @@ void register_wallet_commands() {
   register_api_msg_children();
   register_api_msg_meta();
   register_api_address_outputs();
+  register_api_get_output();
   // TODO
-  // register_api_get_outputs();
   // register_api_get_tips();
 }
 
