@@ -75,33 +75,6 @@ char *get_sensor_json() {
   return sensor_json;
 }
 
-// TODO move to iota.c?
-/**
- * @brief Convert Bech32 address to ed25519 in hex string from
- *
- * @param[in] hrp The HRP prefix
- * @param[in] bech32 A Bech32 address string
- * @param[out] hex A buffer holds output
- * @param[in] hex_len the length of the buffer, should bigger than 65 bytes
- * @return int 0 on success
- */
-static int address_bech32_to_hex(char const hrp[], char const bech32[], char hex[], size_t hex_len) {
-  // ed25519 address in binary
-  byte_t address[IOTA_ADDRESS_BYTES] = {};
-  // convert bech32 address to ed25519 address
-  if (address_from_bech32(hrp, bech32, address) != 0) {
-    printf("Convert bech32 address to ed25519 failed\n");
-    return -1;
-  }
-
-  // ed25519 address to hex string
-  if (bin_2_hex(address + 1, IOTA_ADDRESS_BYTES - 1, hex, hex_len) != 0) {
-    printf("Convert ed25519 address to hex string failed\n");
-    return -2;
-  }
-  return 0;
-}
-
 // 0 on success
 static int endpoint_validation(iota_wallet_t *w) {
   // URL parsing
