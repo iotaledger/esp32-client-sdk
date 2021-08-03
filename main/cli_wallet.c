@@ -255,7 +255,7 @@ static int fn_get_address(int argc, char **argv) {
   uint32_t start = (uint32_t)get_addr_args.idx_start->dval[0];
   uint32_t count = (uint32_t)get_addr_args.idx_count->dval[0];
 
-  for (uint32_t i = 0; i < start + count; i++) {
+  for (uint32_t i = start; i < start + count; i++) {
     addr_with_version[0] = ADDRESS_VER_ED25519;
     nerrors = wallet_address_by_index(wallet, i, addr_with_version + 1);
     if (nerrors != 0) {
@@ -307,7 +307,7 @@ static int fn_get_balance(int argc, char **argv) {
   uint32_t start = get_balance_args.idx_start->dval[0];
   uint32_t count = get_balance_args.idx_count->dval[0];
 
-  for (uint32_t i = 0; i < start + count; i++) {
+  for (uint32_t i = start; i < start + count; i++) {
     if (wallet_balance_by_index(wallet, i, &balance) != 0) {
       ESP_LOGI(TAG, "get balance failed on %zu\n", i);
       return -2;
@@ -544,7 +544,8 @@ static int fn_api_find_msg_index(int argc, char **argv) {
     return -1;
   }
 
-  int err = find_message_by_index(&wallet->endpoint, api_find_msg_index_args.index->sval[0], res);
+  char const *const idx_str = api_find_msg_index_args.index->sval[0];
+  int err = find_message_by_index(&wallet->endpoint, idx_str, res);
   if (err) {
     ESP_LOGE(TAG, "find message by index API failed");
   } else {
@@ -552,10 +553,14 @@ static int fn_api_find_msg_index(int argc, char **argv) {
       printf("%s\n", res->u.error->msg);
     } else {
       size_t count = res_find_msg_get_id_len(res);
-      for (size_t i = 0; i < count; i++) {
-        printf("%s\n", res_find_msg_get_id(res, i));
+      if (count != 0) {
+        for (size_t i = 0; i < count; i++) {
+          printf("%s\n", res_find_msg_get_id(res, i));
+        }
+        printf("message ID count %zu\n", count);
+      } else {
+        printf("No message found with Index: %s\n", idx_str);
       }
-      printf("message ID count %zu\n", count);
     }
   }
 
@@ -744,7 +749,7 @@ static int fn_api_msg_meta(int argc, char **argv) {
 
         // check referenced milestone index
         if (res->u.meta->referenced_milestone != 0) {
-          printf("referencedByMilestoneIndex: %" PRIu64 "\n", res->u.meta->referenced_milestone);
+          printf("referencedMilestoneIndex: %" PRIu64 "\n", res->u.meta->referenced_milestone);
         }
 
         // check should promote
