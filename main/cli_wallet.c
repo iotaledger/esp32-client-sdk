@@ -26,6 +26,7 @@
 
 #include "client/api/v1/find_message.h"
 #include "client/api/v1/get_balance.h"
+#include "client/api/v1/get_message.h"
 #include "client/api/v1/get_message_children.h"
 #include "client/api/v1/get_message_metadata.h"
 #include "client/api/v1/get_node_info.h"
@@ -897,6 +898,183 @@ static void register_api_tips() {
   ESP_ERROR_CHECK(esp_console_cmd_register(&api_tips_cmd));
 }
 
+static void dump_index_payload(payload_index_t *idx) {
+  // dump Indexaction message
+  byte_buf_t *index_str = byte_buf_hex2str(idx->index);
+  byte_buf_t *data_str = byte_buf_hex2str(idx->data);
+  if (index_str != NULL && data_str != NULL) {
+    printf("Index: %s\n\t%s\n", idx->index->data, index_str->data);
+    printf("Data: %s\n\t%s\n", idx->data->data, data_str->data);
+  } else {
+    printf("buffer allocate failed\n");
+  }
+  byte_buf_free(index_str);
+  byte_buf_free(data_str);
+}
+
+static void dump_tx_payload(payload_tx_t *tx) {
+  char temp_addr[128] = {};
+  byte_t addr[IOTA_ADDRESS_BYTES] = {};
+  byte_t pub_key_bin[ED_PUBLIC_KEY_BYTES] = {};
+
+  // inputs
+  printf("Inputs:\n");
+  for (size_t i = 0; i < payload_tx_inputs_count(tx); i++) {
+    printf("\ttx ID[%zu]: %s\n\ttx output index[%zu]: %" PRIu32 "\n", i, payload_tx_inputs_tx_id(tx, i), i,
+           payload_tx_inputs_tx_output_index(tx, i));
+
+    // get input address from public key
+    if (hex_2_bin(payload_tx_blocks_public_key(tx, payload_tx_inputs_tx_output_index(tx, i) - 1),
+                  API_PUB_KEY_HEX_STR_LEN, pub_key_bin, ED_PUBLIC_KEY_BYTES) == 0) {
+      if (address_from_ed25519_pub(pub_key_bin, addr + 1) == 0) {
+        addr[0] = ADDRESS_VER_ED25519;
+        // address bin to bech32 hex string
+        if (address_2_bech32(addr, wallet->bech32HRP, temp_addr) == 0) {
+          printf("\taddress[%zu]: %s\n", i, temp_addr);
+        } else {
+          printf("convert address to bech32 error\n");
+        }
+      } else {
+        printf("get address from public key error\n");
+      }
+    } else {
+      printf("convert pub key to binary failed\n");
+    }
+  }
+
+  // outputs
+  printf("Outputs:\n");
+  for (size_t i = 0; i < payload_tx_outputs_count(tx); i++) {
+    addr[0] = ADDRESS_VER_ED25519;
+    // address hex to bin
+    if (hex_2_bin(payload_tx_outputs_address(tx, i), IOTA_ADDRESS_HEX_BYTES + 1, addr + 1, ED25519_ADDRESS_BYTES) ==
+        0) {
+      // address bin to bech32
+      if (address_2_bech32(addr, wallet->bech32HRP, temp_addr) == 0) {
+        printf("\tAddress[%zu]: %s\n\tAmount[%zu]: %" PRIu64 "\n", i, temp_addr, i, payload_tx_outputs_amount(tx, i));
+      } else {
+        printf("[%s:%d] converting bech32 address failed\n", __FILE__, __LINE__);
+      }
+    } else {
+      printf("[%s:%d] converting binary address failed\n", __FILE__, __LINE__);
+    }
+  }
+
+  // unlock blocks
+  printf("Unlock blocks:\n");
+  for (size_t i = 0; i < payload_tx_blocks_count(tx); i++) {
+    printf("\tPublic Key[%zu]: %s\n\tSignature[%zu]: %s\n", i, payload_tx_blocks_public_key(tx, i), i,
+           payload_tx_blocks_signature(tx, i));
+  }
+
+  // payload?
+  if (tx->payload != NULL && tx->type == MSG_PAYLOAD_INDEXATION) {
+    dump_index_payload((payload_index_t *)tx->payload);
+  }
+}
+
+/* 'api_send_msg' command */
+static struct {
+  struct arg_str *index;
+  struct arg_str *data;
+  struct arg_end *end;
+} api_send_msg_args;
+
+static int fn_api_send_msg(int argc, char **argv) {
+  int nerrors = arg_parse(argc, argv, (void **)&api_send_msg_args);
+  if (nerrors != 0) {
+    arg_print_errors(stderr, api_send_msg_args.end, argv[0]);
+    return -1;
+  }
+  // send indexaction payload
+  res_send_message_t res = {};
+  nerrors =
+      send_indexation_msg(&wallet->endpoint, api_send_msg_args.index->sval[0], api_send_msg_args.data->sval[0], &res);
+  if (nerrors != 0) {
+    printf("send_indexation_msg error\n");
+  } else {
+    if (res.is_error) {
+      printf("%s\n", res.u.error->msg);
+      res_err_free(res.u.error);
+    } else {
+      printf("Message ID: %s\n", res.u.msg_id);
+    }
+  }
+  return nerrors;
+}
+
+static void register_api_send_msg() {
+  api_send_msg_args.index = arg_str1(NULL, NULL, "<Index>", "Message Index");
+  api_send_msg_args.data = arg_str1(NULL, NULL, "<Data>", "Message data");
+  api_send_msg_args.end = arg_end(3);
+  const esp_console_cmd_t api_send_msg_cmd = {
+      .command = "api_send_msg",
+      .help = "Send out a data message to the Tangle",
+      .hint = " <Index> <Data>",
+      .func = &fn_api_send_msg,
+      .argtable = &api_send_msg_args,
+  };
+  ESP_ERROR_CHECK(esp_console_cmd_register(&api_send_msg_cmd));
+}
+
+/* 'api_get_msg' command */
+static struct {
+  struct arg_str *msg_id;
+  struct arg_end *end;
+} api_get_msg_args;
+
+static int fn_api_get_msg(int argc, char **argv) {
+  int nerrors = arg_parse(argc, argv, (void **)&api_get_msg_args);
+  if (nerrors != 0) {
+    arg_print_errors(stderr, api_get_msg_args.end, argv[0]);
+    return -1;
+  }
+
+  res_message_t *res = res_message_new();
+  if (res == NULL) {
+    return -2;
+  }
+
+  nerrors = get_message_by_id(&wallet->endpoint, api_get_msg_args.msg_id->sval[0], res);
+  if (nerrors == 0) {
+    if (res->is_error) {
+      printf("%s\n", res->u.error->msg);
+    } else {
+      message_t *msg = res->u.msg;
+      printf("Network ID: %s\n", msg->net_id);
+      printf("Parent Message ID:\n");
+      for (size_t i = 0; i < api_message_parent_count(msg); i++) {
+        printf("\t%s\n", api_message_parent_id(msg, i));
+      }
+      if (msg->type == MSG_PAYLOAD_INDEXATION) {
+        dump_index_payload((payload_index_t *)msg->payload);
+      } else if (msg->type == MSG_PAYLOAD_TRANSACTION) {
+        dump_tx_payload((payload_tx_t *)msg->payload);
+      } else {
+        printf("TODO: payload type: %d\n", msg->type);
+      }
+    }
+  } else {
+    printf("get_message_by_id API error\n");
+  }
+
+  res_message_free(res);
+  return nerrors;
+}
+
+static void register_api_get_msg() {
+  api_get_msg_args.msg_id = arg_str1(NULL, NULL, "<Message ID>", "Message ID");
+  api_get_msg_args.end = arg_end(2);
+  const esp_console_cmd_t api_get_msg_cmd = {
+      .command = "api_get_msg",
+      .help = "Get a message from a given message ID",
+      .hint = " <Message ID>",
+      .func = &fn_api_get_msg,
+      .argtable = &api_get_msg_args,
+  };
+  ESP_ERROR_CHECK(esp_console_cmd_register(&api_get_msg_cmd));
+}
+
 //============= Public functions====================
 
 void register_wallet_commands() {
@@ -922,6 +1100,8 @@ void register_wallet_commands() {
   register_api_address_outputs();
   register_api_get_output();
   register_api_tips();
+  register_api_send_msg();
+  register_api_get_msg();
 }
 
 int init_wallet() {
