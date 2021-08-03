@@ -19,6 +19,8 @@ This SDK provides some example for testing and learn IOTA Client application, co
 * `api_address_outputs` - Get output ID list from a given address
 * `api_get_output` - Get the output object from a given output ID
 * `api_tips` - Get tips from the connected node
+* `api_send_msg` - Send out a data message to the Tangle
+* `api_get_msg` - Get a message from a given message ID
 
 **Wallet**
 
@@ -51,8 +53,7 @@ Please follow documentations to setup your toolchain and development framework.
 * [esp32 get started](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html)
 * [esp32-c3 get started](https://docs.espressif.com/projects/esp-idf/en/latest/esp32c3/get-started/index.html)
 
-
-**Notice: We use the master branch([c13afea635a](https://github.com/espressif/esp-idf/tree/c13afea635adec735435961270d0894ff46eef85)) of ESP-IDF, make sure you clone the right branch of ESP-IDF**
+**Notice: This SDK is tested under [esp-idf/release/v4.3](https://github.com/espressif/esp-idf/tree/release/v4.3)**
 
 Clone esp-idf from GitHub
 
