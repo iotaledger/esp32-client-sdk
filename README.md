@@ -4,54 +4,54 @@ This SDK is built on top of [iota.c](https://github.com/iotaledger/iota.c) and [
 
 Learn more about [iota.c](https://github.com/iotaledger/iota.c) please visit [IOTA C Client Documentation](https://iota-c-client.readthedocs.io/en/latest/index.html)
 
-
 ## Example Commands
 
 This SDK provides some example for testing and learn IOTA Client application, commands are shown below:
 
 **Client API**
 
-* `node_info` - Get info from the connected node
-* `api_msg_index` - Find messages by a given Index
-* `api_get_balance` - Get balance from a given address
-* `api_msg_children` - Get children from a given message ID
-* `api_msg_meta` - Get metadata from a given message ID
-* `api_address_outputs` - Get output ID list from a given address
-* `api_get_output` - Get the output object from a given output ID
-* `api_tips` - Get tips from the connected node
-* `api_send_msg` - Send out a data message to the Tangle
-* `api_get_msg` - Get a message from a given message ID
+- `node_info` - Get info from the connected node
+- `api_msg_index` - Find messages by a given Index
+- `api_get_balance` - Get balance from a given address
+- `api_msg_children` - Get children from a given message ID
+- `api_msg_meta` - Get metadata from a given message ID
+- `api_address_outputs` - Get output ID list from a given address
+- `api_get_output` - Get the output object from a given output ID
+- `api_tips` - Get tips from the connected node
+- `api_send_msg` - Send out a data message to the Tangle
+- `api_get_msg` - Get a message from a given message ID
 
 **Wallet**
 
-* `balance` - Get address balance by the index rage.
-* `address` - Get address by the index range.
-* `send` - Send tokens from the given index to the receiver address.
-* `sensor` - Send sensor data to the Tangle periodically.
+- `mnemonic_gen` - Generate a random mnemonic sentence
+- `mnemonic_update` - Replace wallet mnemonic.
+- `balance` - Get address balance by the index rage.
+- `address` - Get address by the index range.
+- `send` - Send tokens from the given index to the receiver address.
+- `sensor` - Send sensor data to the Tangle periodically.
 
 **System**
 
-* `help` - List commands
-* `free` - Get the size of available heap.
-* `heap` - Get heap info
-* `stack` - Get main stack info
-* `version` - Get esp32 and wallet versions
-* `restart` - system reboot
+- `help` - List commands
+- `free` - Get the size of available heap.
+- `heap` - Get heap info
+- `stack` - Get main stack info
+- `version` - Get esp32 and wallet versions
+- `restart` - system reboot
 
-## Requirements  
+## Requirements
 
 This project was tested on `ESP32-DevKitC V4` and `ESP32-C3-DevKitC 02` dev boards.
 
-* [ESP32-DevKitC V4](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/hw-reference/modules-and-boards.html#esp32-devkitc-v4)
-* [ESP32-C3-DevKitC-02](https://docs.espressif.com/projects/esp-idf/en/latest/esp32c3/hw-reference/esp32c3/user-guide-devkitc-02.html#esp32-c3-devkitc-02)
-
+- [ESP32-DevKitC V4](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/hw-reference/modules-and-boards.html#esp32-devkitc-v4)
+- [ESP32-C3-DevKitC-02](https://docs.espressif.com/projects/esp-idf/en/latest/esp32c3/hw-reference/esp32c3/user-guide-devkitc-02.html#esp32-c3-devkitc-02)
 
 ## Build system setup
 
 Please follow documentations to setup your toolchain and development framework.
 
-* [esp32 get started](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html)
-* [esp32-c3 get started](https://docs.espressif.com/projects/esp-idf/en/latest/esp32c3/get-started/index.html)
+- [esp32 get started](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html)
+- [esp32-c3 get started](https://docs.espressif.com/projects/esp-idf/en/latest/esp32c3/get-started/index.html)
 
 **Notice: This SDK is tested under [esp-idf/release/v4.3](https://github.com/espressif/esp-idf/tree/release/v4.3)**
 
@@ -79,11 +79,13 @@ $ git submodule update --init --recursive
 Here we need to set the target device before configuration.
 
 For ESP32
+
 ```
 $ idf.py set-target esp32
 ```
 
 For ESP32-C3
+
 ```
 $ idf.py set-target esp32c3
 ```
@@ -114,7 +116,6 @@ $ idf.py build
 [Transaction Message](https://explorer.iota.org/testnet/message/9e3c7e9c49ef9b776744976e787b4a1c87429d7f2888e4f468ff9986aabb4af1)
 
 ![](image/transaction_message.png)
-
 
 [Data Message](https://explorer.iota.org/testnet/message/992692eb38daa75c5211b3dd6cc10fc29aaa4fe004f2b446e00b2bb851662fc8)
 

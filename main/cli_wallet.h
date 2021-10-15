@@ -4,7 +4,7 @@
 #pragma once
 
 #define WALLET_VERSION_MAJOR 0
-#define WALLET_VERSION_MINOR 3
+#define WALLET_VERSION_MINOR 4
 #define WALLET_VERSION_MICRO 0
 
 #define VER_STR0(s) #s

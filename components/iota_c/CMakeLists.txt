@@ -10,6 +10,7 @@ set(CORE_SRCS
     "${IOTA_SRC_DIR}/core/models/payloads/indexation.c"
     "${IOTA_SRC_DIR}/core/models/payloads/transaction.c"
     "${IOTA_SRC_DIR}/core/models/message.c"
+    "${IOTA_SRC_DIR}/core/models/unlock_block.c"
     "${IOTA_SRC_DIR}/core/utils/bech32.c"
     "${IOTA_SRC_DIR}/core/utils/byte_buffer.c"
     "${IOTA_SRC_DIR}/core/utils/iota_str.c"
@@ -33,7 +34,10 @@ set(CLIENT_SRCS
     "${IOTA_SRC_DIR}/client/api/v1/response_error.c"
     "${IOTA_SRC_DIR}/client/api/v1/send_message.c")
 
-set(WALLET_SRCS "${IOTA_SRC_DIR}/wallet/wallet.c")
+set(WALLET_SRCS 
+    "${IOTA_SRC_DIR}/wallet/wallet.c"
+    "${IOTA_SRC_DIR}/wallet/bip39.c"
+)
 
 idf_component_register(
   SRCS
@@ -48,6 +52,11 @@ idf_component_register(
   libsodium
   esp-tls
   esp_http_client
-  json)
+  json
+  utf8proc)
 
-add_definitions(-DCRYPTO_USE_SODIUM)
+if(CONFIG_ENG_MNEMONIC_ONLY)
+  add_definitions(-DCRYPTO_USE_SODIUM -DBIP39_ENGLISH_ONLY)
+else()
+  add_definitions(-DCRYPTO_USE_SODIUM)
+endif()
