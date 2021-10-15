@@ -2,3 +2,6 @@
 	path = components/iota_c/iota_c
 	url = https://github.com/iotaledger/iota.c.git
 	branch = dev
+[submodule "components/utf8proc/utf8proc"]
+	path = components/utf8proc/utf8proc
+	url = https://github.com/JuliaStrings/utf8proc.git

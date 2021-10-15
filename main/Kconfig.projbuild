@@ -36,7 +36,7 @@ menu "IOTA Wallet"
 
     config IOTA_NODE_URL
         string "IOTA Node URL"
-        default "https://api.lb-0.testnet.chrysalis2.com/"
+        default "https://api.lb-0.h.chrysalis-devnet.iota.cafe/"
         help
             The URL of an IOTA node.
 
@@ -47,11 +47,17 @@ menu "IOTA Wallet"
         help
             The API port of the IOTA node.
 
-    config WALLET_SEED
-        string "Wallet SEED"
+    config WALLET_MNEMONIC
+        string "Mnemonic"
         default "random"
         help
-            The seed of this wallet
+            The mnemonic sentence of this wallet
+
+    config ENG_MNEMONIC_ONLY
+        bool "English Mnemonic Only"
+        default y
+        help
+            Support English mnemonic only
 
     config SENSOR_DELAY_SCALE
         int "Sensor Sampling Period"

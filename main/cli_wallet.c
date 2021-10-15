@@ -3,6 +3,7 @@
 
 #include <ctype.h>
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/time.h>
@@ -34,6 +35,7 @@
 #include "client/api/v1/get_outputs_from_address.h"
 #include "client/api/v1/get_tips.h"
 #include "client/api/v1/send_message.h"
+#include "wallet/bip39.h"
 #include "wallet/wallet.h"
 
 #define APP_WALLET_SEED CONFIG_WALLET_SEED
@@ -114,6 +116,21 @@ static int endpoint_validation(iota_wallet_t *w) {
   }
 
   return 0;
+}
+
+static void dump_address(iota_wallet_t *w, uint32_t index, bool is_change) {
+  char tmp_bech32_addr[65];
+  byte_t tmp_addr[ED25519_ADDRESS_BYTES];
+
+  wallet_bech32_from_index(w, is_change, index, tmp_bech32_addr);
+  wallet_address_from_index(w, is_change, index, tmp_addr);
+
+  printf("Addr[%" PRIu32 "]\n", index);
+  // print ed25519 address without version filed.
+  printf("\t");
+  dump_hex_str(tmp_addr, ED25519_ADDRESS_BYTES);
+  // print out
+  printf("\t%s\n", tmp_bech32_addr);
 }
 
 /* 'version' command */
@@ -215,12 +232,11 @@ static void register_stack_info() {
 static struct {
   struct arg_dbl *idx_start;
   struct arg_dbl *idx_count;
+  struct arg_int *is_change;
   struct arg_end *end;
 } get_addr_args;
 
 static int fn_get_address(int argc, char **argv) {
-  byte_t addr_with_version[IOTA_ADDRESS_BYTES] = {};
-  char tmp_bech32_addr[100] = {};
   int nerrors = arg_parse(argc, argv, (void **)&get_addr_args);
   if (nerrors != 0) {
     arg_print_errors(stderr, get_addr_args.end, argv[0]);
@@ -228,35 +244,24 @@ static int fn_get_address(int argc, char **argv) {
   }
   uint32_t start = (uint32_t)get_addr_args.idx_start->dval[0];
   uint32_t count = (uint32_t)get_addr_args.idx_count->dval[0];
+  bool is_change = get_addr_args.is_change->ival[0];
 
+  printf("list addresses with change %d\n", is_change);
   for (uint32_t i = start; i < start + count; i++) {
-    addr_with_version[0] = ADDRESS_VER_ED25519;
-    nerrors = wallet_address_by_index(wallet, i, addr_with_version + 1);
-    if (nerrors != 0) {
-      printf("wallet_address_by_index error\n");
-      break;
-    } else {
-      if (address_2_bech32(addr_with_version, wallet->bech32HRP, tmp_bech32_addr) == 0) {
-        printf("Addr[%" PRIu32 "]\n", i);
-        // print ed25519 address without version filed.
-        printf("\t");
-        dump_hex_str(addr_with_version + 1, ED25519_ADDRESS_BYTES);
-        // print out
-        printf("\t%s\n", tmp_bech32_addr);
-      }
-    }
+    dump_address(wallet, i, is_change);
   }
-  return nerrors;
+  return 0;
 }
 
 static void register_get_address() {
   get_addr_args.idx_start = arg_dbl1(NULL, NULL, "<start>", "start index");
   get_addr_args.idx_count = arg_dbl1(NULL, NULL, "<count>", "number of addresses");
-  get_addr_args.end = arg_end(2);
+  get_addr_args.is_change = arg_int1(NULL, NULL, "<is_change>", "0 or 1");
+  get_addr_args.end = arg_end(5);
   const esp_console_cmd_t get_address_cmd = {
       .command = "address",
-      .help = "Get the address from an index",
-      .hint = " <start> <count>",
+      .help = "Get the address from index",
+      .hint = " <start> <count> <is_change>",
       .func = &fn_get_address,
       .argtable = &get_addr_args,
   };
@@ -267,6 +272,7 @@ static void register_get_address() {
 static struct {
   struct arg_dbl *idx_start;
   struct arg_dbl *idx_count;
+  struct arg_int *is_change;
   struct arg_end *end;
 } get_balance_args;
 
@@ -280,13 +286,15 @@ static int fn_get_balance(int argc, char **argv) {
 
   uint32_t start = get_balance_args.idx_start->dval[0];
   uint32_t count = get_balance_args.idx_count->dval[0];
+  bool is_change = get_balance_args.is_change->ival[0];
 
   for (uint32_t i = start; i < start + count; i++) {
-    if (wallet_balance_by_index(wallet, i, &balance) != 0) {
-      ESP_LOGI(TAG, "get balance failed on %zu\n", i);
+    if (wallet_balance_by_index(wallet, is_change, i, &balance) != 0) {
+      printf("Err: get balance failed on index %u\n", i);
       return -2;
     }
-    printf("balance on address [%" PRIu32 "]: %" PRIu64 "i\n", i, balance);
+    dump_address(wallet, i, is_change);
+    printf("balance: %" PRIu64 "\n", balance);
   }
   return 0;
 }
@@ -294,11 +302,12 @@ static int fn_get_balance(int argc, char **argv) {
 static void register_get_balance() {
   get_balance_args.idx_start = arg_dbl1(NULL, NULL, "<start>", "start index");
   get_balance_args.idx_count = arg_dbl1(NULL, NULL, "<count>", "number of address");
-  get_balance_args.end = arg_end(2);
+  get_balance_args.is_change = arg_int1(NULL, NULL, "<is_change>", "0 or 1");
+  get_balance_args.end = arg_end(5);
   const esp_console_cmd_t get_balance_cmd = {
       .command = "balance",
       .help = "Get the balance from a range of address index",
-      .hint = " <start> <count>",
+      .hint = " <start> <count> <is_change>",
       .func = &fn_get_balance,
       .argtable = &get_balance_args,
   };
@@ -352,7 +361,8 @@ static int fn_send_msg(int argc, char **argv) {
     printf("send indexation payload to tangle\n");
   }
 
-  nerrors = wallet_send(wallet, (uint32_t)send_msg_args.sender->dval[0], recv + 1, balance, "ESP32 Wallet",
+  // send from address that change is 0
+  nerrors = wallet_send(wallet, false, (uint32_t)send_msg_args.sender->dval[0], recv + 1, balance, "ESP32 Wallet",
                         (byte_t *)data, sizeof(data), msg_id, sizeof(msg_id));
   if (nerrors) {
     printf("send message failed\n");
@@ -562,7 +572,6 @@ static struct {
 } api_get_balance_args;
 
 static int fn_api_get_balance(int argc, char **argv) {
-  char hex_addr[IOTA_ADDRESS_HEX_BYTES + 1] = {};
   int nerrors = arg_parse(argc, argv, (void **)&api_get_balance_args);
   if (nerrors != 0) {
     arg_print_errors(stderr, api_get_balance_args.end, argv[0]);
@@ -571,22 +580,16 @@ static int fn_api_get_balance(int argc, char **argv) {
 
   char const *const bech32_add_str = api_get_balance_args.addr->sval[0];
   if (strncmp(bech32_add_str, wallet->bech32HRP, strlen(wallet->bech32HRP)) != 0) {
-    printf("Invalid address hash\n");
+    printf("Invalid prefix of the bech32 address\n");
     return -2;
   } else {
-    // bech32 address to hex string
-    if (address_bech32_to_hex(wallet->bech32HRP, bech32_add_str, hex_addr, sizeof(hex_addr)) != 0) {
-      printf("Convert ed25519 address to hex string failed\n");
-      return -3;
-    }
-
     // get balance from connected node
     res_balance_t *res = res_balance_new();
     if (!res) {
       printf("Create res_balance_t object failed\n");
       return -4;
     } else {
-      nerrors = get_balance(&wallet->endpoint, hex_addr, res);
+      nerrors = get_balance(&wallet->endpoint, true, bech32_add_str, res);
       if (nerrors != 0) {
         printf("get_balance API failed\n");
       } else {
@@ -603,12 +606,12 @@ static int fn_api_get_balance(int argc, char **argv) {
 }
 
 static void register_api_get_balance() {
-  api_get_balance_args.addr = arg_str1(NULL, NULL, "<address>", "Address HASH");
+  api_get_balance_args.addr = arg_str1(NULL, NULL, "<bech32>", "Bech32 Address");
   api_get_balance_args.end = arg_end(2);
   const esp_console_cmd_t api_get_balance_cmd = {
       .command = "api_get_balance",
-      .help = "Get balance from a given address",
-      .hint = " <address>",
+      .help = "Get balance from a given bech32 address",
+      .hint = " <bech32 address>",
       .func = &fn_api_get_balance,
       .argtable = &api_get_balance_args,
   };
@@ -807,11 +810,11 @@ static int fn_api_address_outputs(int argc, char **argv) {
 }
 
 static void register_api_address_outputs() {
-  api_address_outputs_args.addr = arg_str1(NULL, NULL, "<Address>", "Address hash");
+  api_address_outputs_args.addr = arg_str1(NULL, NULL, "<Address>", "Bech32 Address");
   api_address_outputs_args.end = arg_end(2);
   const esp_console_cmd_t api_address_outputs_cmd = {
       .command = "api_address_outputs",
-      .help = "Get output ID list from a given address",
+      .help = "Get output ID list from a given bech32 address",
       .hint = " <Address>",
       .func = &fn_api_address_outputs,
       .argtable = &api_address_outputs_args,
@@ -1075,6 +1078,94 @@ static void register_api_get_msg() {
   ESP_ERROR_CHECK(esp_console_cmd_register(&api_get_msg_cmd));
 }
 
+/* 'mnemonic_gen' command */
+static struct {
+  struct arg_int *language_id;
+  struct arg_end *end;
+} mnemonic_gen_args;
+
+static int fn_mnemonic_gen(int argc, char **argv) {
+  char buf[256] = {};
+
+  int nerrors = arg_parse(argc, argv, (void **)&mnemonic_gen_args);
+  if (nerrors != 0) {
+    arg_print_errors(stderr, mnemonic_gen_args.end, argv[0]);
+    return -1;
+  }
+
+#if CONFIG_ENG_MNEMONIC_ONLY
+  mnemonic_generator(MS_ENTROPY_256, MS_LAN_EN, buf, sizeof(buf));
+#else
+  int lan_id = mnemonic_gen_args.language_id->ival[0];
+  // validate id
+  if (lan_id < MS_LAN_EN || lan_id > MS_LAN_PT) {
+    printf("invalid language id, id value is %d to %d\n", MS_LAN_EN, MS_LAN_PT);
+    return -2;
+  }
+  mnemonic_generator(MS_ENTROPY_256, lan_id, buf, sizeof(buf));
+#endif
+  printf("%s\n", buf);
+  return 0;
+}
+
+static void register_mnemonic_gen() {
+  mnemonic_gen_args.language_id = arg_int1(NULL, NULL, "<language id>", "0 to 8");
+  mnemonic_gen_args.end = arg_end(2);
+  const esp_console_cmd_t mnemonic_gen_cmd = {
+      .command = "mnemonic_gen",
+      .help = "generate a random mnemonic sentence",
+      .hint = " <Language ID>",
+      .func = &fn_mnemonic_gen,
+      .argtable = &mnemonic_gen_args,
+  };
+  ESP_ERROR_CHECK(esp_console_cmd_register(&mnemonic_gen_cmd));
+}
+
+/* 'mnemonic_update' command */
+
+static struct {
+  struct arg_str *ms;
+  struct arg_end *end;
+} ms_update_args;
+
+static int fn_mnemonic_update(int argc, char **argv) {
+  byte_t new_seed[64] = {};
+
+  int nerrors = arg_parse(argc, argv, (void **)&ms_update_args);
+  if (nerrors != 0) {
+    arg_print_errors(stderr, ms_update_args.end, argv[0]);
+    return -1;
+  }
+
+  char const *const ms = ms_update_args.ms->sval[0];
+
+  if (mnemonic_to_seed(ms, "", new_seed, sizeof(new_seed)) == 0) {
+    // dump_hex_str(new_seed, sizeof(new_seed));
+    // replace seed
+    memcpy(wallet->seed, new_seed, IOTA_SEED_BYTES);
+    printf("mnemonic is changed to\n%s\n", ms);
+    return 0;
+  }
+
+  printf("Update mnemonic seed failed..\n");
+
+  return -1;
+}
+
+static void register_mnemonic_update() {
+  ms_update_args.ms = arg_str1(NULL, NULL, "<mnemonic>", "Mnemonic sentence");
+  ms_update_args.end = arg_end(2);
+
+  const esp_console_cmd_t mnemonic_update_cmd = {
+      .command = "mnemonic_update",
+      .help = "Replace wallet mnemonic",
+      .hint = " <mnemonic>",
+      .func = &fn_mnemonic_update,
+      .argtable = &ms_update_args,
+  };
+  ESP_ERROR_CHECK(esp_console_cmd_register(&mnemonic_update_cmd));
+}
+
 //============= Public functions====================
 
 void register_wallet_commands() {
@@ -1084,12 +1175,6 @@ void register_wallet_commands() {
   register_stack_info();
   register_version();
   register_restart();
-
-  // wallet APIs
-  register_get_balance();
-  register_send_tokens();
-  register_get_address();
-  register_sensor();
 
   // client APIs
   register_api_node_info();
@@ -1102,28 +1187,33 @@ void register_wallet_commands() {
   register_api_tips();
   register_api_send_msg();
   register_api_get_msg();
+
+  // wallet APIs
+  register_get_balance();
+  register_send_tokens();
+  register_get_address();
+  register_mnemonic_gen();
+  register_mnemonic_update();
+  register_sensor();
 }
 
 int init_wallet() {
-  byte_t seed[IOTA_SEED_BYTES] = {};
-
-  // seed validation
-  if (strcmp(CONFIG_WALLET_SEED, "random") == 0) {
-    random_seed(seed);
-  } else {
-    size_t seed_len = strlen(CONFIG_WALLET_SEED);
-    if (seed_len != IOTA_SEED_HEX_BYTES) {
-      ESP_LOGI(TAG, "invalid seed length: %zu, expect 64 characters", seed_len);
+  char ms_buf[256] = {};
+  // init mnemonic
+  if (strcmp(CONFIG_WALLET_MNEMONIC, "random") == 0) {
+    printf("Generating new mnemonic sentence...\n");
+    mnemonic_generator(MS_ENTROPY_256, MS_LAN_EN, ms_buf, sizeof(ms_buf));
+    printf("###\n%s\n###\n", ms_buf);
+    // init wallet with account index 0
+    if ((wallet = wallet_create(ms_buf, "", 0)) == NULL) {
+      ESP_LOGE(TAG, "create wallet failed with random mnemonic\n");
       return -1;
     }
-    hex_2_bin(CONFIG_WALLET_SEED, strlen(CONFIG_WALLET_SEED), seed, sizeof(seed));
-  }
-
-  // create wallet instance
-  wallet = wallet_create(seed, "m/44'/4218'/0'/0'");
-  if (!wallet) {
-    ESP_LOGE(TAG, "wallet create failed\n");
-    return -1;
+  } else {
+    if ((wallet = wallet_create(CONFIG_WALLET_MNEMONIC, "", 0)) == NULL) {
+      ESP_LOGE(TAG, "create wallet failed with default mnemonic\n");
+      return -1;
+    }
   }
 
   if (endpoint_validation(wallet) != 0) {
