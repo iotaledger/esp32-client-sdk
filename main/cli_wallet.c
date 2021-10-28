@@ -764,7 +764,6 @@ static struct {
 } api_address_outputs_args;
 
 static int fn_api_address_outputs(int argc, char **argv) {
-  char hex_addr[IOTA_ADDRESS_HEX_BYTES + 1] = {};
   int nerrors = arg_parse(argc, argv, (void **)&api_address_outputs_args);
   if (nerrors != 0) {
     arg_print_errors(stderr, api_address_outputs_args.end, argv[0]);
@@ -778,18 +777,12 @@ static int fn_api_address_outputs(int argc, char **argv) {
     return -2;
   }
 
-  // bech32 address to hex string
-  if (address_bech32_to_hex(wallet->bech32HRP, bech32_add_str, hex_addr, sizeof(hex_addr)) != 0) {
-    printf("Convert address failed\n");
-    return -3;
-  }
-
   res_outputs_address_t *res = res_outputs_address_new();
   if (!res) {
     printf("Allocate res_outputs_address_t failed\n");
-    return -4;
+    return -3;
   } else {
-    nerrors = get_outputs_from_address(&wallet->endpoint, hex_addr, res);
+    nerrors = get_outputs_from_address(&wallet->endpoint, true, bech32_add_str, res);
     if (nerrors != 0) {
       printf("get_outputs_from_address error\n");
     } else {
