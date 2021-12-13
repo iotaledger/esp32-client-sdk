@@ -25,6 +25,8 @@
 #include "cli_wallet.h"
 #include "sensor.h"
 
+#include "events_api.h"
+
 #include "client/api/v1/find_message.h"
 #include "client/api/v1/get_balance.h"
 #include "client/api/v1/get_message.h"
@@ -1159,6 +1161,22 @@ static void register_mnemonic_update() {
   ESP_ERROR_CHECK(esp_console_cmd_register(&mnemonic_update_cmd));
 }
 
+/* 'get_events_data' command */
+static int fn_get_node_events(int argc, char **argv) {
+  get_events_api();
+  return 0;
+}
+
+static void register_node_events() {
+  const esp_console_cmd_t node_events_cmd = {
+      .command = "node_events",
+      .help = "Get node events data",
+      .hint = NULL,
+      .func = &fn_get_node_events,
+  };
+  ESP_ERROR_CHECK(esp_console_cmd_register(&node_events_cmd));
+}
+
 //============= Public functions====================
 
 void register_wallet_commands() {
@@ -1188,6 +1206,9 @@ void register_wallet_commands() {
   register_mnemonic_gen();
   register_mnemonic_update();
   register_sensor();
+
+  // Node Events
+  register_node_events();
 }
 
 int init_wallet() {
