@@ -183,7 +183,6 @@ void process_event_data(event_client_event_t *event) {
 }
 
 int node_events(int event_select) {
-  printf("Received Event Select : %d", event_select);
   if ((event_select == 0) && is_client_running) {
     event_destroy(client);
     is_client_running = false;
