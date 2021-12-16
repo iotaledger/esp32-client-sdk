@@ -4,10 +4,10 @@
 #ifndef __EVENTS_API_H__
 #define __EVENTS_API_H__
 
-#define EVENTS_HOST "mqtt.lb-0.h.chrysalis-devnet.iota.cafe"
-#define EVENTS_PORT 1883
-#define EVENTS_CLIENT_ID "iota_test_123"
-#define EVENTS_KEEP_ALIVE 60
+#define EVENTS_HOST CONFIG_EVENTS_HOST
+#define EVENTS_PORT CONFIG_EVENTS_PORT
+#define EVENTS_CLIENT_ID CONFIG_EVENTS_CLIENT_ID
+#define EVENTS_KEEP_ALIVE CONFIG_EVENTS_KEEP_ALIVE
 
 /**
  * @brief Subscribe and receive data from node events api

@@ -35,38 +35,63 @@ menu "IOTA Wallet"
     endmenu
 
     menu "Event Config"
+
+        config EVENTS_HOST
+            string "Events Node URL"
+            default "mqtt.lb-0.h.chrysalis-devnet.iota.cafe"
+            help
+                Iota events node url
+
+        config EVENTS_PORT
+            int "Events Port"
+            default 1883
+            help
+                Iota events port
+
+        config EVENTS_CLIENT_ID
+            string "Events Client Id"
+            default "iota_test_@123"
+            help
+                Client id for events
+
+        config EVENTS_KEEP_ALIVE
+            int "Events Keep Alive"
+            default 60
+            help
+                Events connection keep alive time in seconds
+
         config EVENT_MESSAGE_ID
-            string "MESSAGE ID"
+            string "Message Id"
             default ""
             help
                 Message id to querry metadata
 
         config EVENT_OUTPUT_ID
-            string "OUTPUT ID"
+            string "Output Id"
             default ""
             help
                 Output id to get output payload on state change
 
         config EVENT_BECH32_ADDRESS
-            string "BECH32 ADDRESS"
+            string "BECH32 Address"
             default ""
             help
                 Bech32 address to get the output payload on the specified address
 
         config EVENT_ED25519_ADDRESS
-            string "ED25519 ADDRESS"
+            string "ED25519 Address"
             default ""
             help
                 Ed25519 address to get the output payload on the specified address
 
         config EVENT_TXN_ID
-            string "TRANSACTION ID"
+            string "Transaction Id"
             default ""
             help
                 Transaction id to get confirmed message which carried the transaction with the specified transaction id
 
         config EVENT_INDEX
-            string "INDEX"
+            string "Index"
             default ""
             help
                 Index to get newly received messages which contain indexation payloads with the specified index parameter
