@@ -12,6 +12,6 @@
 /**
  * @brief Subscribe and receive data from node events api
  */
-int get_events_api(void);
+int node_events(int event_select);
 
 #endif

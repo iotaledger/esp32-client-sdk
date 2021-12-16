@@ -14,12 +14,16 @@
 #include "events_api.h"
 
 // Update test data while testing
-char const *const test_message_id = "406d0d18ee7cd35e80465b61d1a90842bfa49012392057f65c22d7d4eb7768c7";
+char const *const test_message_id = "e3fff518ae55dca12f78b7af6df84050293cad74d654c005ee5f6138b02f555a";
 char const *const test_output_id = "3912942d1cb588d8091eff2069bdd797a0a834739dc8ea550e35fb0dc8609c820000";
 char const *const test_bech32 = "atoi1qrl2x8zs43f9f8hnwgt79jrc98s9e4s6uqaeakthlvrd7a46vr595t3fylm";
 char const *const test_ed25519 = "fea31c50ac52549ef37217e2c87829e05cd61ae03b9ed977fb06df76ba60e85a";
 char const *const test_transaction_id = "963b96adc39ebb7f96cfc523a4b4df658c2fb4a1bb5a9f0de5fa66e7207a2236";
 char const *const test_index = "546573746e6574205370616d6d6572";
+
+event_client_handle_t client;
+bool is_client_running = false;
+int event_select_g = 0;
 
 void process_event_data(event_client_event_t *event);
 
@@ -33,16 +37,40 @@ void callback(event_client_event_t *event) {
       /* Making subscriptions in the on_connect() callback means that if the
        * connection drops and is automatically resumed by the client, then the
        * subscriptions will be recreated when the client reconnects. */
-      event_subscribe(event->client, NULL, TOPIC_MS_LATEST, 1);
-      event_subscribe(event->client, NULL, TOPIC_MS_CONFIRMED, 1);
-      event_subscribe(event->client, NULL, TOPIC_MS_REFERENCED, 1);
-      event_subscribe(event->client, NULL, TOPIC_MESSAGES, 1);
-      event_subscribe_msg_metadata(event->client, NULL, test_message_id, 1);
-      event_sub_address_outputs(event->client, NULL, test_bech32, true, 1);
-      event_sub_address_outputs(event->client, NULL, test_ed25519, false, 1);
-      event_sub_outputs_id(event->client, NULL, test_output_id, 1);
-      event_sub_txn_included_msg(event->client, NULL, test_transaction_id, 1);
-      event_sub_msg_indexation(event->client, NULL, test_index, 1);
+      // Check if LSB bit is set
+      if (event_select_g & 1) {
+        event_subscribe(event->client, NULL, TOPIC_MS_LATEST, 1);
+        event_subscribe(event->client, NULL, TOPIC_MS_CONFIRMED, 1);
+      }
+      // Check if 2nd bit from LSB in set
+      if (event_select_g & (1 << 1)) {
+        event_subscribe(event->client, NULL, TOPIC_MESSAGES, 1);
+      }
+      // Check if 3rd bit from LSB in set
+      if (event_select_g & (1 << 2)) {
+        event_subscribe(event->client, NULL, TOPIC_MS_REFERENCED, 1);
+      }
+      // Check if 4th bit from LSB in set
+      if (event_select_g & (1 << 3)) {
+        event_sub_msg_indexation(event->client, NULL, test_index, 1);
+      }
+      // Check if 5th bit from LSB in set
+      if (event_select_g & (1 << 4)) {
+        event_subscribe_msg_metadata(event->client, NULL, test_message_id, 1);
+      }
+      // Check if 6th bit from LSB in set
+      if (event_select_g & (1 << 5)) {
+        event_sub_outputs_id(event->client, NULL, test_output_id, 1);
+      }
+      // Check if 7th bit from LSB in set
+      if (event_select_g & (1 << 6)) {
+        event_sub_txn_included_msg(event->client, NULL, test_transaction_id, 1);
+      }
+      // Check if 8th bit from LSB in set
+      if (event_select_g & (1 << 7)) {
+        event_sub_address_outputs(event->client, NULL, test_bech32, true, 1);
+        event_sub_address_outputs(event->client, NULL, test_ed25519, false, 1);
+      }
       break;
     case NODE_EVENT_DISCONNECTED:
       printf("Node event network disconnected\n");
@@ -142,14 +170,25 @@ void process_event_data(event_client_event_t *event) {
   free(data_buff);
 }
 
-int get_events_api(void) {
-  event_client_config_t config = {
-      .host = EVENTS_HOST, .port = EVENTS_PORT, .client_id = EVENTS_CLIENT_ID, .keepalive = EVENTS_KEEP_ALIVE};
-  event_client_handle_t client = event_init(&config);
-  event_register_cb(client, &callback);
-  int rc = event_start(client);
-  if (rc == -1) {
+int node_events(int event_select) {
+  printf("Received Event Select : %d", event_select);
+  if ((event_select == 0) && is_client_running) {
     event_destroy(client);
+    is_client_running = false;
+  } else if ((event_select > 0) && !is_client_running) {
+    event_select_g = event_select;
+    event_client_config_t config = {
+        .host = EVENTS_HOST, .port = EVENTS_PORT, .client_id = EVENTS_CLIENT_ID, .keepalive = EVENTS_KEEP_ALIVE};
+    client = event_init(&config);
+    event_register_cb(client, &callback);
+    int rc = event_start(client);
+    if (rc == -1) {
+      event_destroy(client);
+      return -1;
+    }
+    is_client_running = true;
+  } else {
+    return -1;
   }
   return 0;
 }
