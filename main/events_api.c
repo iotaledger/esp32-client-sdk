@@ -13,13 +13,13 @@
 #include "client/api/events/sub_serialized_output.h"
 #include "events_api.h"
 
-// Update test data while testing
-char const *const test_message_id = "e3fff518ae55dca12f78b7af6df84050293cad74d654c005ee5f6138b02f555a";
-char const *const test_output_id = "3912942d1cb588d8091eff2069bdd797a0a834739dc8ea550e35fb0dc8609c820000";
-char const *const test_bech32 = "atoi1qrl2x8zs43f9f8hnwgt79jrc98s9e4s6uqaeakthlvrd7a46vr595t3fylm";
-char const *const test_ed25519 = "fea31c50ac52549ef37217e2c87829e05cd61ae03b9ed977fb06df76ba60e85a";
-char const *const test_transaction_id = "963b96adc39ebb7f96cfc523a4b4df658c2fb4a1bb5a9f0de5fa66e7207a2236";
-char const *const test_index = "546573746e6574205370616d6d6572";
+// Update test data in menuconfig while testing
+#define TEST_MESSAGE_ID CONFIG_EVENT_MESSAGE_ID
+#define TEST_OUTPUT_ID CONFIG_EVENT_OUTPUT_ID
+#define TEST_BECH32_ADDRESS CONFIG_EVENT_BECH32_ADDRESS
+#define TEST_ED25519_ADDRESS CONFIG_EVENT_ED25519_ADDRESS
+#define TEST_TXN_ID CONFIG_EVENT_TXN_ID
+#define TEST_INDEX CONFIG_EVENT_INDEX
 
 event_client_handle_t client;
 bool is_client_running = false;
@@ -52,24 +52,36 @@ void callback(event_client_event_t *event) {
       }
       // Check if 4th bit from LSB in set
       if (event_select_g & (1 << 3)) {
-        event_sub_msg_indexation(event->client, NULL, test_index, 1);
+        if (strlen(TEST_INDEX) > 0) {
+        event_sub_msg_indexation(event->client, NULL, TEST_INDEX, 1);
+        }
       }
       // Check if 5th bit from LSB in set
       if (event_select_g & (1 << 4)) {
-        event_subscribe_msg_metadata(event->client, NULL, test_message_id, 1);
+        if (strlen(TEST_MESSAGE_ID) > 0) {
+          event_subscribe_msg_metadata(event->client, NULL, TEST_MESSAGE_ID, 1);
+        }
       }
       // Check if 6th bit from LSB in set
       if (event_select_g & (1 << 5)) {
-        event_sub_outputs_id(event->client, NULL, test_output_id, 1);
+        if (strlen(TEST_OUTPUT_ID) > 0) {
+          event_sub_outputs_id(event->client, NULL, TEST_OUTPUT_ID, 1);
+        }
       }
       // Check if 7th bit from LSB in set
       if (event_select_g & (1 << 6)) {
-        event_sub_txn_included_msg(event->client, NULL, test_transaction_id, 1);
+        if (strlen(TEST_TXN_ID) > 0) {
+        event_sub_txn_included_msg(event->client, NULL, TEST_TXN_ID, 1);
+        }
       }
       // Check if 8th bit from LSB in set
       if (event_select_g & (1 << 7)) {
-        event_sub_address_outputs(event->client, NULL, test_bech32, true, 1);
-        event_sub_address_outputs(event->client, NULL, test_ed25519, false, 1);
+        if (strlen(TEST_BECH32_ADDRESS) > 0) {
+        event_sub_address_outputs(event->client, NULL, TEST_BECH32_ADDRESS, true, 1);
+        }
+        if (strlen(TEST_ED25519_ADDRESS) > 0) {
+        event_sub_address_outputs(event->client, NULL, TEST_ED25519_ADDRESS, false, 1);
+        }
       }
       break;
     case NODE_EVENT_DISCONNECTED:
