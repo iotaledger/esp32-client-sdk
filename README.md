@@ -40,6 +40,7 @@ This SDK provides some example for testing and learn IOTA Client application, co
 - `restart` - system reboot
 
 **Node Events**
+
 The node event API is in charge of publishing information about events within the node software.
 - Event Config : `menuconfig->IOTA Wallet->Event Config`
 - Command : `node_events`
