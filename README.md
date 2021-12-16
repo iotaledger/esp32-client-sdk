@@ -30,6 +30,9 @@ This SDK provides some example for testing and learn IOTA Client application, co
 - `send` - Send tokens from the given index to the receiver address.
 - `sensor` - Send sensor data to the Tangle periodically.
 
+**Node Events**
+- `node_events` - Subscribe to node events.
+
 **System**
 
 - `help` - List commands
