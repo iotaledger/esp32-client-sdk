@@ -28,10 +28,7 @@ This SDK provides some example for testing and learn IOTA Client application, co
 - `balance` - Get address balance by the index rage.
 - `address` - Get address by the index range.
 - `send` - Send tokens from the given index to the receiver address.
-- `sensor` - Send sensor data to the Tangle periodically.
-
-**Node Events**
-- `node_events` - Subscribe to node events.
+- `sensor` - Send sensor data to the Tangle periodically.`
 
 **System**
 
@@ -41,6 +38,31 @@ This SDK provides some example for testing and learn IOTA Client application, co
 - `stack` - Get main stack info
 - `version` - Get esp32 and wallet versions
 - `restart` - system reboot
+
+**Node Events**
+The node event API is in charge of publishing information about events within the node software.
+- Event Config : `menuconfig->IOTA Wallet->Event Config`
+- Command : `node_events`
+- Argument : `<event_select>`
+- Usage : `node_events <event_select>`
+**Note :**
+- *The paramter <event_select> should be a one byte hexadecimal value of range 0 - FF.* Eg: `node_events 2F`
+- *To stop receiving events, <event_select> should be 0 :* `node_events 0`
+- *The set bit positions of the <event_select> hexadecimal value determines the events to be subscribed. Refer table below for events, bit positions and its config parameters.*
+
+| Event | Bit Position | Menu Config |
+|:---:|:---:|:---:|
+| milestones/latest | 1 | * |
+| milestones/confirmed | 1 | * |
+| messages | 2 | * |
+| messages/referenced | 3 | * |
+| messages/indexation/[index] | 4 | Index |
+| messages/[messageId]/metadata | 5 | Message Id |
+| outputs/[outputId] | 6 | Output Id |
+| transactions/[transactionId]/included-message | 7 | Transaction Id |
+| addresses/[bech32_address]/outputs | 8 | BECH32 Address |
+| addresses/ed25519/[address]/outputs | 8 | ED25519 Address |
+*Position of bit to be counted from the LSB side.*
 
 ## Requirements
 
