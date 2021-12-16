@@ -45,10 +45,11 @@ The node event API is in charge of publishing information about events within th
 - Command : `node_events`
 - Argument : `<event_select>`
 - Usage : `node_events <event_select>`
-**Note :**
+
+*Note :*
 - *The paramter <event_select> should be a one byte hexadecimal value of range 0 - FF.* Eg: `node_events 2F`
 - *To stop receiving events, <event_select> should be 0 :* `node_events 0`
-- *The set bit positions of the <event_select> hexadecimal value determines the events to be subscribed. Refer table below for events, bit positions and its config parameters.*
+- *The set bit positions of the <event_select> hexadecimal value determines the events to be subscribed. Refer the table below for events, bit positions and its config parameters.*
 
 | Event | Bit Position | Menu Config |
 |:---:|:---:|:---:|
