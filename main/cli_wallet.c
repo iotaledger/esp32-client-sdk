@@ -25,6 +25,8 @@
 #include "cli_wallet.h"
 #include "sensor.h"
 
+#include "events_api.h"
+
 #include "client/api/v1/find_message.h"
 #include "client/api/v1/get_balance.h"
 #include "client/api/v1/get_message.h"
@@ -1159,6 +1161,53 @@ static void register_mnemonic_update() {
   ESP_ERROR_CHECK(esp_console_cmd_register(&mnemonic_update_cmd));
 }
 
+/* 'get_events_data' command */
+static struct {
+  struct arg_str *event_select;
+  struct arg_end *end;
+} node_events_args;
+
+static int fn_get_node_events(int argc, char **argv) {
+  int nerrors = arg_parse(argc, argv, (void **)&node_events_args);
+  if (nerrors != 0) {
+    arg_print_errors(stderr, node_events_args.end, argv[0]);
+    return -1;
+  }
+  const char *event_select_str = node_events_args.event_select->sval[0];
+  int event_select_len = strlen(event_select_str);
+  // Check if only two characters are received
+  if (event_select_len > 2) {
+    printf("Invalid input.\n");
+    return -1;
+  }
+  // Check if received string is hex encoded
+  for (int i = 0; i < event_select_len; i++) {
+    char ch = event_select_str[i];
+    if ((ch < '0' || ch > '9') && (ch < 'A' || ch > 'F')) {
+      printf("Invalid input.\n");
+      return -1;
+    }
+  }
+  // Convert the received hex string to integer
+  int event_select_int = (int)strtol(event_select_str, NULL, 16);
+
+  node_events(event_select_int);
+  return 0;
+}
+
+static void register_node_events() {
+  node_events_args.event_select = arg_str1(NULL, NULL, "<Events Select>", "Events Select");
+  node_events_args.end = arg_end(2);
+  const esp_console_cmd_t node_events_cmd = {
+      .command = "node_events",
+      .help = "Get node events data",
+      .hint = NULL,
+      .func = &fn_get_node_events,
+      .argtable = &node_events_args,
+  };
+  ESP_ERROR_CHECK(esp_console_cmd_register(&node_events_cmd));
+}
+
 //============= Public functions====================
 
 void register_wallet_commands() {
@@ -1188,6 +1237,9 @@ void register_wallet_commands() {
   register_mnemonic_gen();
   register_mnemonic_update();
   register_sensor();
+
+  // Node Events
+  register_node_events();
 }
 
 int init_wallet() {

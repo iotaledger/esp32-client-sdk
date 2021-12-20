@@ -18,6 +18,7 @@ set(CORE_SRCS
 
 set(CLIENT_SRCS
     "${IOTA_SRC_DIR}/client/network/http_esp32.c"
+    "${IOTA_SRC_DIR}/client/network/mqtt/mqtt_esp32.c"
     "${IOTA_SRC_DIR}/client/api/json_utils.c"
     "${IOTA_SRC_DIR}/client/api/message_builder.c"
     "${IOTA_SRC_DIR}/client/api/message.c"
@@ -32,7 +33,13 @@ set(CLIENT_SRCS
     "${IOTA_SRC_DIR}/client/api/v1/get_outputs_from_address.c"
     "${IOTA_SRC_DIR}/client/api/v1/get_tips.c"
     "${IOTA_SRC_DIR}/client/api/v1/response_error.c"
-    "${IOTA_SRC_DIR}/client/api/v1/send_message.c")
+    "${IOTA_SRC_DIR}/client/api/v1/send_message.c"
+    "${IOTA_SRC_DIR}/client/api/events/node_event.c"
+    "${IOTA_SRC_DIR}/client/api/events/sub_milestone_latest.c"
+    "${IOTA_SRC_DIR}/client/api/events/sub_milestones_confirmed.c"
+    "${IOTA_SRC_DIR}/client/api/events/sub_messages_metadata.c"
+    "${IOTA_SRC_DIR}/client/api/events/sub_serialized_output.c"
+    "${IOTA_SRC_DIR}/client/api/events/sub_outputs_payload.c")
 
 set(WALLET_SRCS 
     "${IOTA_SRC_DIR}/wallet/wallet.c"
@@ -49,6 +56,7 @@ idf_component_register(
   "iota_c/src"
   PRIV_REQUIRES
   uthash
+  mqtt
   libsodium
   esp-tls
   esp_http_client
