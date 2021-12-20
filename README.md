@@ -28,7 +28,7 @@ This SDK provides some example for testing and learn IOTA Client application, co
 - `balance` - Get address balance by the index rage.
 - `address` - Get address by the index range.
 - `send` - Send tokens from the given index to the receiver address.
-- `sensor` - Send sensor data to the Tangle periodically.`
+- `sensor` - Send sensor data to the Tangle periodically.
 
 **System**
 
