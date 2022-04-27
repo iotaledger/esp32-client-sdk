@@ -97,10 +97,9 @@ $ source ./export.sh
 Clone the wallet source code
 
 ```
-$ git clone https://github.com/oopsmonk/iota_esp32_wallet.git
-$ cd iota_esp32_wallet
-$ git checkout dev_chrysalis
-$ git submodule update --init --recursive
+git clone https://github.com/iotaledger/esp32-client-sdk.git
+cd esp32-client-sdk
+git submodule update --init --recursive
 ```
 
 Here we need to set the target device before configuration.
@@ -119,19 +118,21 @@ $ idf.py set-target esp32c3
 
 Wallet configuration and building application, please change the WiFi setting in `IOTA Wallet -> WiFi`
 
-By default, the wallet uses a `random` seed, you can use your seed by change `(random) Wallet SEED` via **menuconfig**.
+By default, the wallet uses a `random` mnomonic, you can set the mnomonic in `(random) Mnemonic` by **menuconfig**.
 
 ```
 $ idf.py menuconfig
 
 IOTA Wallet  --->
-        WiFi  --->
-        SNTP  --->
-    (https://api.lb-0.testnet.chrysalis2.com/) IOTA Node URL
-    (0) port number
-    (random) Wallet SEED
-    (60) Sensor Sampling Period
-    [ ] Testing Application
+      WiFi  --->
+      SNTP  --->
+      Event Config  --->
+  (https://api.lb-0.h.chrysalis-devnet.iota.cafe/) IOTA Node URL
+  (443) port number
+  (random) Mnemonic
+  [*] English Mnemonic Only
+  (60) Sensor Sampling Period
+  [ ] Testing Applicatio
 
 $ idf.py build
 ```
