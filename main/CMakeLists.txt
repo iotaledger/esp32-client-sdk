@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 if(CONFIG_IOTA_UNIT_TESTS)
   idf_component_register(SRCS "../test/test_main.c" INCLUDE_DIRS ".")
 else()
-  idf_component_register(SRCS "main.c" "cli_wallet.c" "sensor.c" "events_api.c" INCLUDE_DIRS
+  # TODO : Add cli_sensor.c, cli_wallet.c and cli_node_events.c
+  idf_component_register(SRCS "main.c" "cli_restful.c" "cli_system.c" INCLUDE_DIRS
                          ".")
 endif()

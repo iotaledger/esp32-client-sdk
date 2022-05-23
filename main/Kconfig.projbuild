@@ -111,6 +111,12 @@ menu "IOTA Wallet"
         help
             The API port of the IOTA node.
 
+    config IOTA_NODE_USE_TLS
+        bool "IOTA node use tls"
+        default n
+        help
+            The node tls.
+
     config WALLET_MNEMONIC
         string "Mnemonic"
         default "random"

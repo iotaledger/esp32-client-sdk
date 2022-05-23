@@ -11,7 +11,13 @@
 
 /**
  * @brief Subscribe and receive data from node events api
+ * @param[in] event_select Bit positions of event_select will define events to be subscribed
  */
 int node_events(int event_select);
+
+/**
+ * @brief Register node events cli commands
+ */
+void register_node_events();
 
 #endif
