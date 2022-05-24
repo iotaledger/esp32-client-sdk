@@ -84,9 +84,3 @@ idf_component_register(
   esp_http_client
   json
   utf8proc)
-
-if(CONFIG_ENG_MNEMONIC_ONLY)
-  add_definitions(-DCRYPTO_USE_SODIUM -DBIP39_ENGLISH_ONLY)
-else()
-  add_definitions(-DCRYPTO_USE_SODIUM)
-endif()
