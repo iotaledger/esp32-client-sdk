@@ -5,27 +5,37 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "argtable3/argtable3.h"
+#include "esp_console.h"
+#include "esp_log.h"
+#include "esp_system.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
 #include "client/api/events/node_event.h"
 #include "client/api/events/sub_messages_metadata.h"
-#include "client/api/events/sub_milestone_latest.h"
-#include "client/api/events/sub_milestones_confirmed.h"
+#include "client/api/events/sub_milestone_payload.h"
 #include "client/api/events/sub_outputs_payload.h"
 #include "client/api/events/sub_serialized_output.h"
-#include "events_api.h"
+
+#include "client/api/restful/get_message_metadata.h"
+#include "client/api/restful/get_output.h"
+
+#include "cli_node_events.h"
 
 // Update test data in menuconfig while testing
 #define TEST_MESSAGE_ID CONFIG_EVENT_MESSAGE_ID
 #define TEST_OUTPUT_ID CONFIG_EVENT_OUTPUT_ID
-#define TEST_BECH32_ADDRESS CONFIG_EVENT_BECH32_ADDRESS
-#define TEST_ED25519_ADDRESS CONFIG_EVENT_ED25519_ADDRESS
 #define TEST_TXN_ID CONFIG_EVENT_TXN_ID
-#define TEST_INDEX CONFIG_EVENT_INDEX
+
+#define EVENTS_HOST CONFIG_EVENTS_HOST
+#define EVENTS_PORT CONFIG_EVENTS_PORT
+#define EVENTS_CLIENT_ID CONFIG_EVENTS_CLIENT_ID
+#define EVENTS_KEEP_ALIVE CONFIG_EVENTS_KEEP_ALIVE
 
 event_client_handle_t client;
 bool is_client_running = false;
 int event_select_g = 0;
-
-#if 0  // FIXME
 
 void process_event_data(event_client_event_t *event);
 
@@ -41,49 +51,42 @@ void callback(event_client_event_t *event) {
        * subscriptions will be recreated when the client reconnects. */
       // Check if LSB bit is set
       if (event_select_g & 1) {
-        event_subscribe(event->client, NULL, TOPIC_MS_LATEST, 1);
-        event_subscribe(event->client, NULL, TOPIC_MS_CONFIRMED, 1);
+        event_subscribe(event->client, NULL, TOPIC_MILESTONE_LATEST, 1);
+        event_subscribe(event->client, NULL, TOPIC_MILESTONE_CONFIRMED, 1);
       }
-      // Check if 2nd bit from LSB in set
+      // Check if 2nd bit from LSB is set
       if (event_select_g & (1 << 1)) {
         event_subscribe(event->client, NULL, TOPIC_MESSAGES, 1);
       }
-      // Check if 3rd bit from LSB in set
+      // Check if 3rd bit from LSB is set
       if (event_select_g & (1 << 2)) {
-        event_subscribe(event->client, NULL, TOPIC_MS_REFERENCED, 1);
+        event_subscribe(event->client, NULL, TOPIC_MS_TAGGED_DATA, 1);
       }
-      // Check if 4th bit from LSB in set
+      // Check if 4th bit from LSB is set
       if (event_select_g & (1 << 3)) {
-        if (strlen(TEST_INDEX) > 0) {
-        event_sub_msg_indexation(event->client, NULL, TEST_INDEX, 1);
-        }
+        event_subscribe(event->client, NULL, TOPIC_MILESTONES, 1);
       }
-      // Check if 5th bit from LSB in set
+      // Check if 5th bit from LSB is set
       if (event_select_g & (1 << 4)) {
         if (strlen(TEST_MESSAGE_ID) > 0) {
           event_subscribe_msg_metadata(event->client, NULL, TEST_MESSAGE_ID, 1);
         }
       }
-      // Check if 6th bit from LSB in set
+      // Check if 6th bit from LSB is set
       if (event_select_g & (1 << 5)) {
         if (strlen(TEST_OUTPUT_ID) > 0) {
           event_sub_outputs_id(event->client, NULL, TEST_OUTPUT_ID, 1);
         }
       }
-      // Check if 7th bit from LSB in set
+      // Check if 7th bit from LSB is set
       if (event_select_g & (1 << 6)) {
         if (strlen(TEST_TXN_ID) > 0) {
-        event_sub_txn_included_msg(event->client, NULL, TEST_TXN_ID, 1);
+          event_sub_txn_included_msg(event->client, NULL, TEST_TXN_ID, 1);
         }
       }
-      // Check if 8th bit from LSB in set
+      // Check if 8th bit from LSB is set
       if (event_select_g & (1 << 7)) {
-        if (strlen(TEST_BECH32_ADDRESS) > 0) {
-        event_sub_address_outputs(event->client, NULL, TEST_BECH32_ADDRESS, true, 1);
-        }
-        if (strlen(TEST_ED25519_ADDRESS) > 0) {
-        event_sub_address_outputs(event->client, NULL, TEST_ED25519_ADDRESS, false, 1);
-        }
+        event_subscribe(event->client, NULL, TOPIC_MS_TRANSACTION, 1);
       }
       break;
     case NODE_EVENT_DISCONNECTED:
@@ -107,40 +110,40 @@ void callback(event_client_event_t *event) {
   }
 }
 
-void parse_and_print_message_metadata(char *data) {
-  msg_metadata_t *res = res_msg_metadata_new();
+static void parse_and_print_message_metadata(char const *const data, uint32_t len) {
+  // Create and allocate memory for response object
+  msg_meta_t *res = metadata_new();
   if (res) {
-    if (parse_messages_metadata(data, res) == 0) {
-      printf("Msg Id :%s\n", res->msg_id);
-      size_t parents_count = res_msg_metadata_parents_len(res);
-      for (size_t i = 0; i < parents_count; i++) {
-        printf("Parent Id %zu : %s\n", i + 1, res_msg_metadata_parent_get(res, i));
-      }
-      printf("Inclusion State : %s\n", res->inclusion_state);
-      printf("Is Solid : %s\n", res->is_solid ? "true" : "false");
-      printf("Should Promote : %s\n", res->should_promote ? "true" : "false");
-      printf("Should Reattach : %s\n", res->should_reattach ? "true" : "false");
-      printf("Referenced Milestone : %" PRIu64 "\n", res->referenced_milestone);
+    parse_messages_metadata(data, res);
+
+    // Print received data
+    printf("Msg Id :%s\n", res->msg_id);
+    // Get parent id count
+    size_t parents_count = msg_meta_parents_count(res);
+    for (size_t i = 0; i < parents_count; i++) {
+      printf("Parent Id %zu : %s\n", i + 1, msg_meta_parent_get(res, i));
     }
-    res_msg_metadata_free(res);
-  } else {
-    printf("OOM while msg_metadata_t initialization");
+    printf("Inclusion State : %s\n", res->inclusion_state);
+    printf("Is Solid : %s\n", res->is_solid ? "true" : "false");
+    printf("Should Promote : %s\n", res->should_promote ? "true" : "false");
+    printf("Should Reattach : %s\n", res->should_reattach ? "true" : "false");
+    printf("Referenced Milestone : %u\n", res->referenced_milestone);
+
+    // Free response object
+    metadata_free(res);
   }
 }
 
-void parse_and_print_output_payload(char *data) {
-  event_addr_outputs_t res = {};
-  event_parse_address_outputs(data, &res);
-  printf("Message ID: %s\n", res.msg_id);
-  printf("Transaction ID: %s\n", res.tx_id);
-  printf("Output Index: %d\n", res.output_index);
-  printf("Ledger Index: %" PRIu64 "\n", res.ledger_index);
-  printf("isSpent: %s\n", res.is_spent ? "True" : "False");
-  printf("Addr: %s\n", res.output.addr);
-  printf("Amount: %" PRIu64 "\n", res.output.amount);
+static void parse_and_print_output_payload(char const *const data, uint32_t len) {
+  get_output_t *output = get_output_new();
+  if (output) {
+    parse_get_output(data, output);
+    print_get_output(output, 0);
+    get_output_free(output);
+  }
 }
 
-void print_serialized_data(unsigned char *data, uint32_t len) {
+static void print_serialized_data(unsigned char *data, uint32_t len) {
   printf("Received Serialized Data : ");
   for (uint32_t i = 0; i < len; i++) {
     printf("%02x", data[i]);
@@ -155,31 +158,41 @@ void process_event_data(event_client_event_t *event) {
   char *data_buff = (char *)calloc(event->data_len + 1, sizeof(char));
   memcpy(data_buff, event->data, event->data_len);
 
-  if (!strcmp(topic_buff, TOPIC_MS_LATEST)) {
-    milestone_latest_t res = {};
-    if (parse_milestone_latest(data_buff, &res) == 0) {
-      printf("Index :%u\nTimestamp : %" PRIu64 "\n", res.index, res.timestamp);
+  if (!strcmp(topic_buff, TOPIC_MILESTONE_LATEST) || !strcmp(topic_buff, TOPIC_MILESTONE_CONFIRMED)) {
+    events_milestone_payload_t res = {};
+    if (parse_milestone_payload((char *)data_buff, &res) == 0) {
+      printf("Index :%u\nTimestamp : %u\n", res.index, res.timestamp);
     }
-  } else if (!strcmp(topic_buff, TOPIC_MS_CONFIRMED)) {
-    milestone_confirmed_t res = {};
-    if (parse_milestones_confirmed(data_buff, &res) == 0) {
-      printf("Index :%u\nTimestamp : %" PRIu64 "\n", res.index, res.timestamp);
-    }
-  } else if (!strcmp(topic_buff, TOPIC_MS_REFERENCED)) {
-    parse_and_print_message_metadata(data_buff);
-  } else if (!strcmp(topic_buff, TOPIC_MESSAGES)) {
-    print_serialized_data((unsigned char *)data_buff, event->data_len);
-  } else if ((strstr(event->topic, "messages/") != NULL) && (strstr(event->topic, "/metadata") != NULL)) {
-    parse_and_print_message_metadata(event->data);
-  } else if ((strstr(event->topic, "outputs/") != NULL)) {
-    parse_and_print_output_payload(event->data);
-  } else if ((strstr(event->topic, "addresses/") != NULL)) {
-    parse_and_print_output_payload(event->data);
-  } else if ((strstr(event->topic, "transactions/") != NULL) && (strstr(event->topic, "/included-message") != NULL)) {
-    print_serialized_data(event->data, event->data_len);
-  } else if (strstr(event->topic, "messages/indexation/")) {
-    print_serialized_data(event->data, event->data_len);
   }
+  // check for topic messages
+  else if (!strcmp(topic_buff, TOPIC_MESSAGES)) {
+    print_serialized_data((unsigned char *)data_buff, event->data_len);
+  }
+  // check for topic messages/tagged-data
+  else if (!strcmp(topic_buff, TOPIC_MS_TAGGED_DATA)) {
+    print_serialized_data((unsigned char *)data_buff, event->data_len);
+  }
+  // check for topic milestones
+  else if (!strcmp(topic_buff, TOPIC_MILESTONES)) {
+    print_serialized_data((unsigned char *)data_buff, event->data_len);
+  }
+  // check for topic message-metadata/{messageId} and message-metadata/referenced
+  else if (!strcmp(topic_buff, "message-metadata/")) {
+    parse_and_print_message_metadata(data_buff, event->data_len);
+  }
+  // check for outputs/{outputId}
+  else if (strstr(topic_buff, "outputs/") != NULL) {
+    parse_and_print_output_payload(data_buff, event->data_len);
+  }
+  // check for topic transactions/{transactionId}/included-message
+  else if ((strstr(topic_buff, "transactions/") != NULL) && (strstr(topic_buff, "/included-message") != NULL)) {
+    print_serialized_data((unsigned char *)data_buff, event->data_len);
+  }
+  // check for topic messages/transaction
+  else if (!strcmp(topic_buff, TOPIC_MS_TRANSACTION)) {
+    print_serialized_data((unsigned char *)data_buff, event->data_len);
+  }
+
   free(topic_buff);
   free(data_buff);
 }
@@ -240,7 +253,7 @@ static int fn_get_node_events(int argc, char **argv) {
   return 0;
 }
 
-static void register_node_events() {
+void register_node_events() {
   node_events_args.event_select = arg_str1(NULL, NULL, "<Events Select>", "Events Select");
   node_events_args.end = arg_end(2);
   const esp_console_cmd_t node_events_cmd = {
@@ -252,4 +265,3 @@ static void register_node_events() {
   };
   ESP_ERROR_CHECK(esp_console_cmd_register(&node_events_cmd));
 }
-#endif
