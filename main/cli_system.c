@@ -114,3 +114,4 @@ void register_system_commands() {
   register_version();
   register_restart();
 }
+

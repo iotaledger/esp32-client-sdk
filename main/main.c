@@ -298,11 +298,11 @@ void app_main(void) {
   // set node params for restful api's
   set_resftul_node_endpoint();
 
-  // FIXME : init wallet instance
-  // if (init_wallet()) {
-  //   ESP_LOGE(TAG, "Init wallet instance failed\n");
-  //   reboot();
-  // }
+  // initialize a wallet instance
+  if (init_wallet()) {
+    ESP_LOGE(TAG, "Init wallet instance failed\n");
+    reboot();
+  }
 
   // FIXME : temperature sensor
   // init_tempsensor();
@@ -313,7 +313,7 @@ void app_main(void) {
   register_restful_commands();
   register_system_commands();
   // register_sensor_commands();
-  // register_wallet_commands();
+  register_wallet_commands();
   // register_node_events();
 
   char const* prompt = "IOTA> ";
