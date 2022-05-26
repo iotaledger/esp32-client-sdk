@@ -65,8 +65,10 @@ set(CLIENT_SRCS
     "${IOTA_SRC_DIR}/client/api/events/sub_outputs_payload.c"
     "${IOTA_SRC_DIR}/client/api/events/sub_serialized_output.c")
 
-set(WALLET_SRCS "${IOTA_SRC_DIR}/wallet/wallet.c"
-                "${IOTA_SRC_DIR}/wallet/bip39.c")
+set(WALLET_SRCS
+    "${IOTA_SRC_DIR}/wallet/wallet.c"
+    "${IOTA_SRC_DIR}/wallet/output_basic.c"
+    "${IOTA_SRC_DIR}/wallet/bip39.c")
 
 idf_component_register(
   SRCS
