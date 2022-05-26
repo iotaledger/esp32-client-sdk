@@ -30,6 +30,7 @@
 #include "lwip/err.h"
 #include "lwip/sys.h"
 
+#include "cli_node_events.h"
 #include "cli_restful.h"
 #include "cli_sensor.h"
 #include "cli_system.h"
@@ -312,9 +313,9 @@ void app_main(void) {
   esp_console_register_help_command();
   register_restful_commands();
   register_system_commands();
-  // register_sensor_commands();
   register_wallet_commands();
-  // register_node_events();
+  register_node_events();
+  // register_sensor_commands();
 
   char const* prompt = "IOTA> ";
   int probe_status = linenoiseProbe();
