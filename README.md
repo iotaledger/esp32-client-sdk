@@ -153,14 +153,13 @@ $ idf.py -p [PORT] flash monitor
 
 ### Run the Example Application
 
+#### Cli Examples
 ![](image/wallet_console.png)
 
-[Transaction Message](https://explorer.iota.org/testnet/message/9e3c7e9c49ef9b776744976e787b4a1c87429d7f2888e4f468ff9986aabb4af1)
-
+#### Transaction Message
 ![](image/transaction_message.png)
 
-[Data Message](https://explorer.iota.org/testnet/message/992692eb38daa75c5211b3dd6cc10fc29aaa4fe004f2b446e00b2bb851662fc8)
-
+#### Data Message
 ![](image/data_message.png)
 
 **Notice: these messages are on the `testnet` that might not be found after a network reset.**
