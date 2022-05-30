@@ -30,8 +30,11 @@
 #include "lwip/err.h"
 #include "lwip/sys.h"
 
+#include "cli_node_events.h"
+#include "cli_restful.h"
+#include "cli_sensor.h"
+#include "cli_system.h"
 #include "cli_wallet.h"
-#include "sensor.h"
 
 #define APP_WIFI_SSID CONFIG_ESP_WIFI_SSID
 #define APP_WIFI_PWD CONFIG_ESP_WIFI_PASSWORD
@@ -246,6 +249,12 @@ static void initialize_console(void) {
 #endif
 }
 
+static uint64_t timestamp() {
+  struct timeval tv = {0, 0};
+  gettimeofday(&tv, NULL);
+  return (uint64_t)tv.tv_sec;
+}
+
 static void update_time() {
   // init sntp
   ESP_LOGI(TAG, "Initializing SNTP: %s, Timezone: %s", CONFIG_SNTP_SERVER, CONFIG_SNTP_TZ);
@@ -284,24 +293,31 @@ void app_main(void) {
   // wifi setup
   wifi_init();
 
-  // temperature sensor
-  init_tempsensor();
-
   // get time from sntp
   update_time();
 
-  // init wallet instance
+  // set node params for restful api's
+  set_resftul_node_endpoint();
+
+  // initialize a wallet instance
   if (init_wallet()) {
     ESP_LOGE(TAG, "Init wallet instance failed\n");
     reboot();
   }
 
+  // FIXME : temperature sensor
+  // init_tempsensor();
+
   // init console
   initialize_console();
   esp_console_register_help_command();
+  register_restful_commands();
+  register_system_commands();
   register_wallet_commands();
+  register_node_events();
+  // register_sensor_commands();
 
-  char const* prompt = "Chrysalis> ";
+  char const* prompt = "IOTA> ";
   int probe_status = linenoiseProbe();
   if (probe_status) { /* zero indicates success */
     printf(
@@ -310,7 +326,7 @@ void app_main(void) {
         "Line editing and history features are disabled.\n"
         "On Windows, try using Putty instead.\n");
     linenoiseSetDumbMode(1);
-    prompt = "Chrysalis> ";
+    prompt = "IOTA> ";
   }
 
   while (1) {

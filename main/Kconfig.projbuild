@@ -72,29 +72,11 @@ menu "IOTA Wallet"
             help
                 Output id to get output payload on state change
 
-        config EVENT_BECH32_ADDRESS
-            string "BECH32 Address"
-            default ""
-            help
-                Bech32 address to get the output payload on the specified address
-
-        config EVENT_ED25519_ADDRESS
-            string "ED25519 Address"
-            default ""
-            help
-                Ed25519 address to get the output payload on the specified address
-
         config EVENT_TXN_ID
             string "Transaction Id"
             default ""
             help
                 Transaction id to get confirmed message which carried the transaction with the specified transaction id
-
-        config EVENT_INDEX
-            string "Index"
-            default ""
-            help
-                Index to get newly received messages which contain indexation payloads with the specified index parameter
 
     endmenu
 
@@ -110,6 +92,12 @@ menu "IOTA Wallet"
         default 443
         help
             The API port of the IOTA node.
+
+    config IOTA_NODE_USE_TLS
+        bool "IOTA node use tls"
+        default n
+        help
+            The node tls.
 
     config WALLET_MNEMONIC
         string "Mnemonic"
