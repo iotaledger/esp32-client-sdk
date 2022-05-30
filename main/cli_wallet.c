@@ -119,21 +119,21 @@ static int fn_wallet_send_token(int argc, char **argv) {
   ESP_LOGI(TAG, "Amount to send: %" PRIu64 "\n", amount * Mi);
 
   // transfer tokens
-  ESP_LOGI(TAG, "Sending transaction message to the Tangle...\n");
-  res_send_message_t msg_res = {};
-  if (wallet_basic_output_send(wallet, false, sender_addr_index, amount * Mi, &receiver, &msg_res) != 0) {
-    ESP_LOGE(TAG, "Sending message to the Tangle failed!\n");
+  ESP_LOGI(TAG, "Sending transaction block to the Tangle...\n");
+  res_send_block_t blk_res = {};
+  if (wallet_basic_output_send(wallet, false, sender_addr_index, amount * Mi, &receiver, &blk_res) != 0) {
+    ESP_LOGE(TAG, "Sending block to the Tangle failed!\n");
     return -1;
   }
 
-  if (msg_res.is_error) {
-    ESP_LOGE(TAG, "Error: %s\n", msg_res.u.error->msg);
-    res_err_free(msg_res.u.error);
+  if (blk_res.is_error) {
+    ESP_LOGE(TAG, "Error: %s\n", blk_res.u.error->msg);
+    res_err_free(blk_res.u.error);
     return -1;
   }
 
-  ESP_LOGI(TAG, "Message successfully sent.\n");
-  ESP_LOGI(TAG, "Message ID: %s\n", msg_res.u.msg_id);
+  ESP_LOGI(TAG, "Block successfully sent.\n");
+  ESP_LOGI(TAG, "Block ID: %s\n", blk_res.u.blk_id);
 
   return nerrors;
 }
