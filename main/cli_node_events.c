@@ -13,18 +13,18 @@
 #include "freertos/task.h"
 
 #include "client/api/events/node_event.h"
-#include "client/api/events/sub_messages_metadata.h"
+#include "client/api/events/sub_blocks_metadata.h"
 #include "client/api/events/sub_milestone_payload.h"
 #include "client/api/events/sub_outputs_payload.h"
 #include "client/api/events/sub_serialized_output.h"
 
-#include "client/api/restful/get_message_metadata.h"
+#include "client/api/restful/get_block_metadata.h"
 #include "client/api/restful/get_output.h"
 
 #include "cli_node_events.h"
 
 // Update test data in menuconfig while testing
-#define TEST_MESSAGE_ID CONFIG_EVENT_MESSAGE_ID
+#define TEST_BLOCK_ID CONFIG_EVENT_BLOCK_ID
 #define TEST_OUTPUT_ID CONFIG_EVENT_OUTPUT_ID
 #define TEST_TXN_ID CONFIG_EVENT_TXN_ID
 
@@ -56,11 +56,11 @@ void callback(event_client_event_t *event) {
       }
       // Check if 2nd bit from LSB is set
       if (event_select_g & (1 << 1)) {
-        event_subscribe(event->client, NULL, TOPIC_MESSAGES, 1);
+        event_subscribe(event->client, NULL, TOPIC_BLOCKS, 1);
       }
       // Check if 3rd bit from LSB is set
       if (event_select_g & (1 << 2)) {
-        event_subscribe(event->client, NULL, TOPIC_MS_TAGGED_DATA, 1);
+        event_subscribe(event->client, NULL, TOPIC_BLK_TAGGED_DATA, 1);
       }
       // Check if 4th bit from LSB is set
       if (event_select_g & (1 << 3)) {
@@ -68,8 +68,8 @@ void callback(event_client_event_t *event) {
       }
       // Check if 5th bit from LSB is set
       if (event_select_g & (1 << 4)) {
-        if (strlen(TEST_MESSAGE_ID) > 0) {
-          event_subscribe_msg_metadata(event->client, NULL, TEST_MESSAGE_ID, 1);
+        if (strlen(TEST_BLOCK_ID) > 0) {
+          event_subscribe_blk_metadata(event->client, NULL, TEST_BLOCK_ID, 1);
         }
       }
       // Check if 6th bit from LSB is set
@@ -81,12 +81,12 @@ void callback(event_client_event_t *event) {
       // Check if 7th bit from LSB is set
       if (event_select_g & (1 << 6)) {
         if (strlen(TEST_TXN_ID) > 0) {
-          event_sub_txn_included_msg(event->client, NULL, TEST_TXN_ID, 1);
+          event_sub_txn_included_blk(event->client, NULL, TEST_TXN_ID, 1);
         }
       }
       // Check if 8th bit from LSB is set
       if (event_select_g & (1 << 7)) {
-        event_subscribe(event->client, NULL, TOPIC_MS_TRANSACTION, 1);
+        event_subscribe(event->client, NULL, TOPIC_BLK_TRANSACTION, 1);
       }
       break;
     case NODE_EVENT_DISCONNECTED:
@@ -110,18 +110,18 @@ void callback(event_client_event_t *event) {
   }
 }
 
-static void parse_and_print_message_metadata(char const *const data, uint32_t len) {
+static void parse_and_print_block_metadata(char const *const data, uint32_t len) {
   // Create and allocate memory for response object
-  msg_meta_t *res = metadata_new();
+  block_meta_t *res = metadata_new();
   if (res) {
-    parse_messages_metadata(data, res);
+    parse_blocks_metadata(data, res);
 
     // Print received data
-    printf("Msg Id :%s\n", res->msg_id);
+    printf("Block Id :%s\n", res->blk_id);
     // Get parent id count
-    size_t parents_count = msg_meta_parents_count(res);
+    size_t parents_count = block_meta_parents_count(res);
     for (size_t i = 0; i < parents_count; i++) {
-      printf("Parent Id %zu : %s\n", i + 1, msg_meta_parent_get(res, i));
+      printf("Parent Id %zu : %s\n", i + 1, block_meta_parent_get(res, i));
     }
     printf("Inclusion State : %s\n", res->inclusion_state);
     printf("Is Solid : %s\n", res->is_solid ? "true" : "false");
@@ -164,32 +164,32 @@ void process_event_data(event_client_event_t *event) {
       printf("Index :%u\nTimestamp : %u\n", res.index, res.timestamp);
     }
   }
-  // check for topic messages
-  else if (!strcmp(topic_buff, TOPIC_MESSAGES)) {
+  // check for topic blocks
+  else if (!strcmp(topic_buff, TOPIC_BLOCKS)) {
     print_serialized_data((unsigned char *)data_buff, event->data_len);
   }
-  // check for topic messages/tagged-data
-  else if (!strcmp(topic_buff, TOPIC_MS_TAGGED_DATA)) {
+  // check for topic blocks/tagged-data
+  else if (!strcmp(topic_buff, TOPIC_BLK_TAGGED_DATA)) {
     print_serialized_data((unsigned char *)data_buff, event->data_len);
   }
   // check for topic milestones
   else if (!strcmp(topic_buff, TOPIC_MILESTONES)) {
     print_serialized_data((unsigned char *)data_buff, event->data_len);
   }
-  // check for topic message-metadata/{messageId} and message-metadata/referenced
-  else if (!strcmp(topic_buff, "message-metadata/")) {
-    parse_and_print_message_metadata(data_buff, event->data_len);
+  // check for topic block-metadata/{blockId} and block-metadata/referenced
+  else if (!strcmp(topic_buff, "block-metadata/")) {
+    parse_and_print_block_metadata(data_buff, event->data_len);
   }
   // check for outputs/{outputId}
   else if (strstr(topic_buff, "outputs/") != NULL) {
     parse_and_print_output_payload(data_buff, event->data_len);
   }
-  // check for topic transactions/{transactionId}/included-message
-  else if ((strstr(topic_buff, "transactions/") != NULL) && (strstr(topic_buff, "/included-message") != NULL)) {
+  // check for topic transactions/{transactionId}/included-block
+  else if ((strstr(topic_buff, "transactions/") != NULL) && (strstr(topic_buff, "/included-block") != NULL)) {
     print_serialized_data((unsigned char *)data_buff, event->data_len);
   }
-  // check for topic messages/transaction
-  else if (!strcmp(topic_buff, TOPIC_MS_TRANSACTION)) {
+  // check for topic blocks/transaction
+  else if (!strcmp(topic_buff, TOPIC_BLK_TRANSACTION)) {
     print_serialized_data((unsigned char *)data_buff, event->data_len);
   }
 

@@ -60,11 +60,11 @@ menu "IOTA Wallet"
             help
                 Events connection keep alive time in seconds
 
-        config EVENT_MESSAGE_ID
-            string "Message Id"
+        config EVENT_BLOCK_ID
+            string "Block Id"
             default ""
             help
-                Message id to querry metadata
+                Block id to querry metadata
 
         config EVENT_OUTPUT_ID
             string "Output Id"
