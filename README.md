@@ -114,6 +114,7 @@ By default, the wallet uses a `random` mnemonic, you can set the mnomonic in `(r
 ```
 $ idf.py menuconfig
 ```
+![](image/menuconfig.png)
 
 *Update IOTA node endpoint*
 ```
