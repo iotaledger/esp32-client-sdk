@@ -11,24 +11,17 @@ This SDK provides some example for testing and learn IOTA Client application, co
 **Client API**
 
 - `node_info` - Get info from the connected node
-- `api_msg_index` - Find messages by a given Index
-- `api_get_balance` - Get balance from a given address
-- `api_msg_children` - Get children from a given message ID
-- `api_msg_meta` - Get metadata from a given message ID
-- `api_address_outputs` - Get output ID list from a given address
-- `api_get_output` - Get the output object from a given output ID
 - `api_tips` - Get tips from the connected node
-- `api_send_msg` - Send out a data message to the Tangle
-- `api_get_msg` - Get a message from a given message ID
+- `api_get_blk <Block Id>` - Get a block from a given block ID
+- `api_blk_meta <Block Id>` - Get metadata from a given block ID
+- `api_blk_children <Block Id>` - Get children from a given block ID
+- `api_get_output <Output Id>` - Get the output object from a given output ID
+- `api_send_tagged_str <Tag> <Data>` - Send out tagged data string to the Tangle
 
 **Wallet**
 
-- `mnemonic_gen` - Generate a random mnemonic sentence
-- `mnemonic_update` - Replace wallet mnemonic.
-- `balance` - Get address balance by the index rage.
-- `address` - Get address by the index range.
-- `send` - Send tokens from the given index to the receiver address.
-- `sensor` - Send sensor data to the Tangle periodically.
+- `wallet_get_balance <bech32 address>` - Get balance from a given bech32 address
+- `wallet_send_token <sender index> <receiver index> <amount>` - Send tokens from sender address to receiver address
 
 **System**
 
@@ -56,14 +49,14 @@ The node event API is in charge of publishing information about events within th
 |:---:|:---:|:---:|
 | milestones/latest | 1 | * |
 | milestones/confirmed | 1 | * |
-| messages | 2 | * |
-| messages/referenced | 3 | * |
-| messages/indexation/[index] | 4 | Index |
-| messages/[messageId]/metadata | 5 | Message Id |
+| blocks | 2 | * |
+| blocks/tagged-data | 3 | * |
+| milestones | 4 | * |
+| block-metadata/[block Id] | 5 | Block Id |
 | outputs/[outputId] | 6 | Output Id |
-| transactions/[transactionId]/included-message | 7 | Transaction Id |
-| addresses/[bech32_address]/outputs | 8 | BECH32 Address |
-| addresses/ed25519/[address]/outputs | 8 | ED25519 Address |
+| transactions/[transactionId]/included-block | 7 | Transaction Id |
+| blocks/transaction | 8 | * |
+
 *Position of bit to be counted from the LSB side.*
 
 ## Requirements
@@ -116,37 +109,58 @@ For ESP32-C3
 $ idf.py set-target esp32c3
 ```
 
-Wallet configuration and building application, please change the WiFi setting in `IOTA Wallet -> WiFi`
-
-By default, the wallet uses a `random` mnomonic, you can set the mnomonic in `(random) Mnemonic` by **menuconfig**.
+By default, the wallet uses a `random` mnemonic, you can set the mnomonic in `(random) Mnemonic` by **menuconfig**
 
 ```
 $ idf.py menuconfig
+```
+![](image/menuconfig.png)
 
+*Update IOTA node endpoint*
+```
 IOTA Wallet  --->
       WiFi  --->
       SNTP  --->
       Event Config  --->
   (https://api.lb-0.h.chrysalis-devnet.iota.cafe/) IOTA Node URL
-  (443) port number
+  (443) IOTA node port number
+  [ ] IOTA node use tls
   (random) Mnemonic
   [*] English Mnemonic Only
   (60) Sensor Sampling Period
-  [ ] Testing Applicatio
+  [ ] Testing Application
+```
+*Configure Wifi Username and Password so ESP32 can connect in Station Mode, make sure WiFi endpoint has internet access*
+```
+IOTA Wallet --> WiFi --->
+  (myssid) WiFi SSID
+  (mypass) WiFi Password
+  (5) Maximum Retry
+```
+*Update config for Node Events*
+```
+IOTA Wallet --> Event Config --->
+  (mqtt.lb-0.h.chrysalis-devnet.iota.cafe) Events Node URL
+  (1883) Events Port
+  (iota_test_@123) Events Client Id
+  () Block Id : Will be used for block-metadata/[block Id] event
+  () Output Id : Will be used for outputs/[outputId] event
+  () Transaction Id : Will be used for transactions/[transactionId]/included-block event
 
 $ idf.py build
+
+$ idf.py -p [PORT] flash monitor
 ```
 
 ### Run the Example Application
 
+#### Cli Examples
 ![](image/wallet_console.png)
 
-[Transaction Message](https://explorer.iota.org/testnet/message/9e3c7e9c49ef9b776744976e787b4a1c87429d7f2888e4f468ff9986aabb4af1)
-
+#### Transaction Message
 ![](image/transaction_message.png)
 
-[Data Message](https://explorer.iota.org/testnet/message/992692eb38daa75c5211b3dd6cc10fc29aaa4fe004f2b446e00b2bb851662fc8)
-
+#### Data Message
 ![](image/data_message.png)
 
 **Notice: these messages are on the `testnet` that might not be found after a network reset.**
