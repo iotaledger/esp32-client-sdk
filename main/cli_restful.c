@@ -10,7 +10,6 @@
 #include "argtable3/argtable3.h"
 #include "cli_restful.h"
 #include "client/api/restful/get_block.h"
-#include "client/api/restful/get_block_children.h"
 #include "client/api/restful/get_block_metadata.h"
 #include "client/api/restful/get_node_info.h"
 #include "client/api/restful/get_output.h"
@@ -218,53 +217,6 @@ static void register_api_blk_meta() {
   ESP_ERROR_CHECK(esp_console_cmd_register(&api_blk_meta_cmd));
 }
 
-/* 'api_blk_children' command */
-static struct {
-  struct arg_str *blk_id;
-  struct arg_end *end;
-} api_blk_children_args;
-
-static int fn_api_blk_children(int argc, char **argv) {
-  int nerrors = arg_parse(argc, argv, (void **)&api_blk_children_args);
-  if (nerrors != 0) {
-    arg_print_errors(stderr, api_blk_children_args.end, argv[0]);
-    return -1;
-  }
-
-  res_block_children_t *res = res_block_children_new();
-  if (!res) {
-    printf("Allocate block children response failed\n");
-    return -1;
-  } else {
-    nerrors = get_block_children(&ctx, api_blk_children_args.blk_id->sval[0], res);
-    if (nerrors) {
-      printf("get_block_children error %d\n", nerrors);
-    } else {
-      if (res->is_error) {
-        printf("Err: %s\n", res->u.error->msg);
-      } else {
-        print_block_children(res, 0);
-      }
-    }
-    res_block_children_free(res);
-  }
-
-  return nerrors;
-}
-
-static void register_api_blk_children() {
-  api_blk_children_args.blk_id = arg_str1(NULL, NULL, "<ID>", "Block ID");
-  api_blk_children_args.end = arg_end(2);
-  const esp_console_cmd_t api_blk_children_cmd = {
-      .command = "api_blk_children",
-      .help = "Get children from a given block ID",
-      .hint = " <Block ID>",
-      .func = &fn_api_blk_children,
-      .argtable = &api_blk_children_args,
-  };
-  ESP_ERROR_CHECK(esp_console_cmd_register(&api_blk_children_cmd));
-}
-
 /* 'api_get_output' command */
 static struct {
   struct arg_str *output_id;
@@ -366,7 +318,6 @@ void register_restful_commands() {
   register_api_tips();
   register_api_get_blk();
   register_api_blk_meta();
-  register_api_blk_children();
   register_api_get_output();
   register_api_send_tagged_data_str();
 }

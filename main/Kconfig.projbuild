@@ -38,7 +38,7 @@ menu "IOTA Wallet"
 
         config EVENTS_HOST
             string "Events Node URL"
-            default "mqtt.lb-0.h.chrysalis-devnet.iota.cafe"
+            default "192.168.11.111"
             help
                 Iota events node url
 
@@ -82,14 +82,14 @@ menu "IOTA Wallet"
 
     config IOTA_NODE_URL
         string "IOTA Node URL"
-        default "https://api.lb-0.h.chrysalis-devnet.iota.cafe/"
+        default "192.168.11.111"
         help
             The URL of an IOTA node.
 
     config IOTA_NODE_PORT
         int "port number"
         range 0 65535
-        default 443
+        default 14265
         help
             The API port of the IOTA node.
 

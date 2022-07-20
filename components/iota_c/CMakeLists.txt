@@ -7,34 +7,32 @@ set(CORE_SRCS
     "${IOTA_SRC_DIR}/core/models/inputs/utxo_input.c"
     "${IOTA_SRC_DIR}/core/models/outputs/byte_cost_config.c"
     "${IOTA_SRC_DIR}/core/models/outputs/features.c"
+    "${IOTA_SRC_DIR}/core/models/outputs/native_tokens.c"
     "${IOTA_SRC_DIR}/core/models/outputs/output_alias.c"
     "${IOTA_SRC_DIR}/core/models/outputs/output_basic.c"
     "${IOTA_SRC_DIR}/core/models/outputs/output_foundry.c"
     "${IOTA_SRC_DIR}/core/models/outputs/output_nft.c"
-    "${IOTA_SRC_DIR}/core/models/outputs/native_tokens.c"
     "${IOTA_SRC_DIR}/core/models/outputs/outputs.c"
     "${IOTA_SRC_DIR}/core/models/outputs/storage_deposit.c"
     "${IOTA_SRC_DIR}/core/models/outputs/unlock_conditions.c"
-    "${IOTA_SRC_DIR}/core/models/payloads/transaction.c"
-    "${IOTA_SRC_DIR}/core/models/payloads/tagged_data.c"
     "${IOTA_SRC_DIR}/core/models/payloads/milestone.c"
+    "${IOTA_SRC_DIR}/core/models/payloads/tagged_data.c"
+    "${IOTA_SRC_DIR}/core/models/payloads/transaction.c"
     "${IOTA_SRC_DIR}/core/models/block.c"
     "${IOTA_SRC_DIR}/core/models/signing.c"
     "${IOTA_SRC_DIR}/core/models/unlocks.c"
-    "${IOTA_SRC_DIR}/core/utils/iota_str.c"
-    "${IOTA_SRC_DIR}/core/utils/byte_buffer.c"
-    "${IOTA_SRC_DIR}/core/utils/slip10.c"
     "${IOTA_SRC_DIR}/core/utils/bech32.c"
-    "${IOTA_SRC_DIR}/core/utils/uint256.c"
-    "${IOTA_SRC_DIR}/core/utils/macros.h")
+    "${IOTA_SRC_DIR}/core/utils/byte_buffer.c"
+    "${IOTA_SRC_DIR}/core/utils/iota_str.c"
+    "${IOTA_SRC_DIR}/core/utils/slip10.c"
+    "${IOTA_SRC_DIR}/core/utils/uint256.c")
 
 set(CLIENT_SRCS
-    "${IOTA_SRC_DIR}/client/network/http_esp32.c"
-    "${IOTA_SRC_DIR}/client/network/mqtt/mqtt_esp32.c"
-    "${IOTA_SRC_DIR}/client/api/json_parser/common.c"
-    "${IOTA_SRC_DIR}/client/api/json_parser/json_utils.c"
-    "${IOTA_SRC_DIR}/client/api/json_parser/block.c"
-    "${IOTA_SRC_DIR}/client/api/json_parser/unlocks.c"
+    "${IOTA_SRC_DIR}/client/api/events/node_event.c"
+    "${IOTA_SRC_DIR}/client/api/events/sub_blocks_metadata.c"
+    "${IOTA_SRC_DIR}/client/api/events/sub_milestone_payload.c"
+    "${IOTA_SRC_DIR}/client/api/events/sub_outputs_payload.c"
+    "${IOTA_SRC_DIR}/client/api/events/sub_serialized_output.c"
     "${IOTA_SRC_DIR}/client/api/json_parser/inputs/inputs.c"
     "${IOTA_SRC_DIR}/client/api/json_parser/outputs/features.c"
     "${IOTA_SRC_DIR}/client/api/json_parser/outputs/native_tokens.c"
@@ -45,29 +43,32 @@ set(CLIENT_SRCS
     "${IOTA_SRC_DIR}/client/api/json_parser/outputs/outputs.c"
     "${IOTA_SRC_DIR}/client/api/json_parser/outputs/unlock_conditions.c"
     "${IOTA_SRC_DIR}/client/api/json_parser/payloads/payloads.c"
-    "${IOTA_SRC_DIR}/client/api/restful/get_node_info.c"
-    "${IOTA_SRC_DIR}/client/api/restful/response_error.c"
-    "${IOTA_SRC_DIR}/client/api/restful/get_tips.c"
-    "${IOTA_SRC_DIR}/client/api/restful/get_output.c"
-    "${IOTA_SRC_DIR}/client/api/restful/get_health.c"
-    "${IOTA_SRC_DIR}/client/api/restful/get_block_children.c"
+    "${IOTA_SRC_DIR}/client/api/json_parser/block.c"
+    "${IOTA_SRC_DIR}/client/api/json_parser/common.c"
+    "${IOTA_SRC_DIR}/client/api/json_parser/json_utils.c"
+    "${IOTA_SRC_DIR}/client/api/json_parser/unlocks.c"
+    "${IOTA_SRC_DIR}/client/api/restful/faucet_enqueue.c"
     "${IOTA_SRC_DIR}/client/api/restful/get_block_metadata.c"
     "${IOTA_SRC_DIR}/client/api/restful/get_block.c"
+    "${IOTA_SRC_DIR}/client/api/restful/get_health.c"
     "${IOTA_SRC_DIR}/client/api/restful/get_milestone.c"
+    "${IOTA_SRC_DIR}/client/api/restful/get_node_info.c"
+    "${IOTA_SRC_DIR}/client/api/restful/get_output.c"
+    "${IOTA_SRC_DIR}/client/api/restful/get_outputs_id.c"
+    "${IOTA_SRC_DIR}/client/api/restful/get_tips.c"
+    "${IOTA_SRC_DIR}/client/api/restful/get_transaction_included_block.c"
+    "${IOTA_SRC_DIR}/client/api/restful/response_error.c"
     "${IOTA_SRC_DIR}/client/api/restful/send_block.c"
     "${IOTA_SRC_DIR}/client/api/restful/send_tagged_data.c"
-    "${IOTA_SRC_DIR}/client/api/restful/faucet_enqueue.c"
-    "${IOTA_SRC_DIR}/client/api/restful/get_outputs_id.c"
-    "${IOTA_SRC_DIR}/client/api/restful/get_transaction_included_block.c"
-    "${IOTA_SRC_DIR}/client/api/events/node_event.c"
-    "${IOTA_SRC_DIR}/client/api/events/sub_milestone_payload.c"
-    "${IOTA_SRC_DIR}/client/api/events/sub_blocks_metadata.c"
-    "${IOTA_SRC_DIR}/client/api/events/sub_outputs_payload.c"
-    "${IOTA_SRC_DIR}/client/api/events/sub_serialized_output.c")
+    "${IOTA_SRC_DIR}/client/network/http_esp32.c"
+    "${IOTA_SRC_DIR}/client/network/mqtt/mqtt_esp32.c")
 
 set(WALLET_SRCS
-    "${IOTA_SRC_DIR}/wallet/wallet.c" "${IOTA_SRC_DIR}/wallet/output_basic.c"
-    "${IOTA_SRC_DIR}/wallet/bip39.c")
+    "${IOTA_SRC_DIR}/wallet/bip39.c"
+    "${IOTA_SRC_DIR}/wallet/output_alias.c"
+    "${IOTA_SRC_DIR}/wallet/output_basic.c"
+    "${IOTA_SRC_DIR}/wallet/output_foundry.c"
+    "${IOTA_SRC_DIR}/wallet/wallet.c")
 
 idf_component_register(
   SRCS
@@ -76,12 +77,11 @@ idf_component_register(
   ${CLIENT_SRCS}
   ${WALLET_SRCS}
   INCLUDE_DIRS
-  "iota_c/src"
+  ${IOTA_SRC_DIR}
   PRIV_REQUIRES
   uthash
   mqtt
   libsodium
   esp-tls
   esp_http_client
-  json
-  utf8proc)
+  json)
