@@ -20,7 +20,7 @@ This SDK provides some example for testing and learn IOTA Client application, co
 
 **Wallet**
 
-- `wallet_get_balance <bech32 address>` - Get balance from a given bech32 address
+- `wallet_address <start_index> <count> <is_change>` - Get ed25519 addresses of the wallet
 - `wallet_send_token <sender index> <receiver index> <amount>` - Send tokens from sender address to receiver address
 
 **System**
@@ -122,8 +122,8 @@ IOTA Wallet  --->
       WiFi  --->
       SNTP  --->
       Event Config  --->
-  (https://api.lb-0.h.chrysalis-devnet.iota.cafe/) IOTA Node URL
-  (443) IOTA node port number
+  (192.168.11.111) IOTA Node URL
+  (14265) IOTA node port number
   [ ] IOTA node use tls
   (random) Mnemonic
   [*] English Mnemonic Only
